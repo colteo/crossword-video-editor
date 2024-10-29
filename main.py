@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple, Set
 from dataclasses import dataclass
 from enum import Enum, auto
 from PIL import Image, ImageDraw, ImageFont
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
 
 class AnimationType(Enum):
     INITIAL_GRID = "initial_grid"
@@ -436,8 +437,8 @@ class CrosswordVideoGenerator:
         text_color = tuple(self.style['text_color'])
 
         # Definisci gli spessori dei bordi
-        highlight_thickness = 4
-        normal_thickness = 3
+        highlight_thickness = 10
+        normal_thickness = 10
 
         # Se c'è una parola da evidenziare, ottieni le sue celle
         highlighted_cells = set()
@@ -548,7 +549,8 @@ class CrosswordVideoGenerator:
                                                alpha_background * background[y:y + h, x:x + w, c])
 
     def process_video(self, input_video_path: str, output_video_path: str):
-        """Processa il video applicando le animazioni"""
+        """Processa il video applicando le animazioni e mantiene l'audio originale"""
+        # Apri il video per l'elaborazione frame per frame
         cap = cv2.VideoCapture(input_video_path)
         if not cap.isOpened():
             raise ValueError("Impossibile aprire il video di input")
@@ -559,9 +561,10 @@ class CrosswordVideoGenerator:
         fps = int(cap.get(cv2.CAP_PROP_FPS))
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        # Prepara il writer del video
+        # Crea un file video temporaneo per l'output senza audio
+        temp_output = "temp_output.mp4"
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+        out = cv2.VideoWriter(temp_output, fourcc, fps, (width, height))
 
         frame_number = 0
         print(f"Inizio elaborazione video...")
@@ -587,6 +590,37 @@ class CrosswordVideoGenerator:
 
         cap.release()
         out.release()
+
+        # Ora combina il video processato con l'audio originale
+        print("Combinazione del video con l'audio originale...")
+        try:
+            # Carica il video originale per estrarre l'audio
+            original_video = VideoFileClip(input_video_path)
+            # Carica il video processato
+            processed_video = VideoFileClip(temp_output)
+
+            # Combina il video processato con l'audio originale
+            final_video = processed_video.set_audio(original_video.audio)
+
+            # Esporta il video finale
+            final_video.write_videofile(output_video_path,
+                                        codec='libx264',
+                                        audio_codec='aac')
+
+            # Chiudi i file
+            original_video.close()
+            processed_video.close()
+
+            # Rimuovi il file temporaneo
+            import os
+            os.remove(temp_output)
+
+        except Exception as e:
+            print(f"Errore durante la combinazione dell'audio: {e}")
+            # In caso di errore, mantieni almeno il video senza audio
+            import shutil
+            shutil.move(temp_output, output_video_path)
+
         print(f"Elaborazione video completata. Output salvato in: {output_video_path}")
 
 
@@ -598,7 +632,7 @@ def main():
             template_data = json.load(f)
 
         # Carica i dati del cruciverba
-        with open('crossword-data.json', 'r') as f:
+        with open('crossword-data-02.json', 'r') as f:
             crossword_data = json.load(f)
 
         # Crea il generatore
