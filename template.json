@@ -3,41 +3,41 @@
   "animation_patterns": [
     {
       "type": "initial_grid",
-      "start": 5.1,
-      "end": 8.2
+      "start": 1.0,
+      "end": 3.0
     },
     {
       "type": "show_grid_word_01_empty",
-      "start": 8.2,
-      "end": 15.0
+      "start": 3.0,
+      "end": 6.0
     },
     {
       "type": "show_clue_01",
-      "start": 9.0,
-      "end": 13.6,
-      "pos_x": "center",
-      "pos_v": 600
+      "start": 3.0,
+      "end": 6.0,
+      "pos_x": 100,
+      "pos_y": 200
     },
     {
       "type": "show_grid_word_01",
-      "start": 15.4,
-      "end": 19.4
+      "start": 6.0,
+      "end": 8.0
     },
     {
       "type": "show_grid_word_02_empty",
-      "start": 19.4,
-      "end": 26.6
+      "start": 8.0,
+      "end": 11.0
     },{
       "type": "show_clue_02",
-      "start": 20.0,
-      "end": 24.8,
-      "pos_x": "center",
+      "start": 8.0,
+      "end": 11.0,
+      "pos_x": 300,
       "pos_v": 600
     },
     {
       "type": "show_grid_word_02",
-      "start": 26.6,
-      "end": 30.7
+      "start": 11.0,
+      "end": 25.0
     }
   ],
   "style_settings": {

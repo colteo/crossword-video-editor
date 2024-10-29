@@ -87,21 +87,50 @@ class CrosswordVideoGenerator:
 
         return clue_overlay, (width, height)
 
-    def _get_clue_position(self, pattern: Dict, clue_size: Tuple[int, int], frame_size: Tuple[int, int]) -> Tuple[int, int]:
+    def _get_clue_position(self, pattern: Dict, clue_size: Tuple[int, int], frame_size: Tuple[int, int]) -> Tuple[
+        int, int]:
         """
-        Calcola la posizione dell'indizio basandosi sul pattern
+        Calcola la posizione dell'indizio basandosi sulle coordinate specificate nel pattern
+
+        Args:
+            pattern: Pattern di animazione con le coordinate di posizionamento
+            clue_size: Dimensioni dell'overlay dell'indizio (width, height)
+            frame_size: Dimensioni del frame (width, height)
+
+        Returns:
+            Tuple[int, int]: Coordinate (x, y) per il posizionamento dell'indizio
         """
         clue_width, clue_height = clue_size
         frame_width, frame_height = frame_size
 
         # Gestisce il posizionamento orizzontale
-        if pattern['pos_x'] == 'center':
+        if isinstance(pattern.get('pos_x'), str) and pattern['pos_x'] == 'center':
             x = (frame_width - clue_width) // 2
         else:
-            x = int(pattern['pos_x'])
+            try:
+                # Usa la coordinata x specificata
+                x = int(pattern['pos_x'])
+                # Assicura che l'indizio non esca dal frame
+                x = max(0, min(x, frame_width - clue_width))
+            except (ValueError, KeyError):
+                # Fallback al centro se c'è un errore
+                x = (frame_width - clue_width) // 2
 
         # Gestisce il posizionamento verticale
-        y = int(pattern['pos_v'])
+        # Prima controlla pos_y, poi pos_v per retrocompatibilità
+        vertical_pos = pattern.get('pos_y', pattern.get('pos_v'))
+
+        if isinstance(vertical_pos, str) and vertical_pos == 'center':
+            y = (frame_height - clue_height) // 2
+        else:
+            try:
+                # Usa la coordinata verticale specificata
+                y = int(vertical_pos)
+                # Assicura che l'indizio non esca dal frame
+                y = max(0, min(y, frame_height - clue_height))
+            except (ValueError, TypeError):
+                # Fallback: posiziona vicino al fondo del frame
+                y = frame_height - clue_height - self.layout.get('clue_distance_from_bottom', 100)
 
         return (x, y)
 
