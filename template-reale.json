@@ -1,0 +1,57 @@
+{
+  "template_id": "type-a",
+  "animation_patterns": [
+    {
+      "type": "initial_grid",
+      "start": 5.1,
+      "end": 8.2
+    },
+    {
+      "type": "show_grid_word_01_empty",
+      "start": 8.2,
+      "end": 15.0
+    },
+    {
+      "type": "show_clue_01",
+      "start": 9.0,
+      "end": 13.6,
+      "pos_x": "center",
+      "pos_v": 600
+    },
+    {
+      "type": "show_grid_word_01",
+      "start": 15.4,
+      "end": 19.4
+    },
+    {
+      "type": "show_grid_word_02_empty",
+      "start": 19.4,
+      "end": 26.6
+    },{
+      "type": "show_clue_02",
+      "start": 20.0,
+      "end": 24.8,
+      "pos_x": "center",
+      "pos_v": 600
+    },
+    {
+      "type": "show_grid_word_02",
+      "start": 26.6,
+      "end": 30.7
+    }
+  ],
+  "style_settings": {
+    "crossword": {
+      "cell_size": 75,
+      "border_color": [0, 0, 0],
+      "background_color": [255, 255, 255],
+      "highlight_color": [0, 255, 0],
+      "text_color": [0, 0, 0],
+      "font_scale": 1.0
+    }
+  },
+  "layout": {
+    "clue_distance_from_bottom": 100,
+    "crossword_position": "center"
+  }
+}
