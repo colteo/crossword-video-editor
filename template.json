@@ -55,6 +55,10 @@
       "clue_font": {
         "size": 20,
         "color": [0, 0, 0]
+      },
+      "grid_font": {
+        "size": 46,
+        "color": [0, 0, 0]
       }
     }
   },

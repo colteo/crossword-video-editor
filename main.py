@@ -48,21 +48,25 @@ class CrosswordVideoGenerator:
         min_x, min_y, max_x, max_y = self.bounds
         self.grid_width = (max_x - min_x + 1) * self.style['cell_size']
         self.grid_height = (max_y - min_y + 1) * self.style['cell_size']
-        # Configurazione globale per il wrapping del testo
         self.max_text_width = self.style.get('max_text_width', 500)
         self.line_spacing = self.style.get('line_spacing', 1.5)
 
-        # Leggi la dimensione del font dalle impostazioni
+        # Leggi le dimensioni dei font dalle impostazioni
         font_settings = self.style.get('clue_font', {})
-        font_size = font_settings.get('size', 32)  # default 32 se non specificato
+        grid_font_settings = self.style.get('grid_font', {})
 
-        # Carica il font Press Start 2P con la dimensione dalle impostazioni
+        clue_font_size = font_settings.get('size', 32)
+        grid_font_size = grid_font_settings.get('size', 48)  # Dimensione default più grande per la griglia
+
         try:
-            self.clue_font = ImageFont.truetype("PressStart2P-Regular.ttf", font_size)
-            print(f"Font caricato con dimensione: {font_size}")
+            # Carica due versioni del font con dimensioni diverse
+            self.clue_font = ImageFont.truetype("PressStart2P-Regular.ttf", clue_font_size)
+            self.grid_font = ImageFont.truetype("PressStart2P-Regular.ttf", grid_font_size)
+            print(f"Font caricati - Clue size: {clue_font_size}, Grid size: {grid_font_size}")
         except IOError:
             print("Font Press Start 2P non trovato. Assicurati di averlo installato nel sistema.")
             self.clue_font = ImageFont.load_default()
+            self.grid_font = ImageFont.load_default()
 
     def _get_font_height(self, font: ImageFont.FreeTypeFont) -> int:
         """
@@ -419,12 +423,7 @@ class CrosswordVideoGenerator:
     def _create_grid_overlay(self, highlight_word_index: int = None, show_letters: bool = False,
                              is_initial: bool = False) -> np.ndarray:
         """
-        Crea l'overlay della griglia del cruciverba
-
-        Args:
-            highlight_word_index: Indice della parola da evidenziare
-            show_letters: Se mostrare le lettere nelle celle
-            is_initial: Se è la griglia iniziale (determina il colore dei bordi)
+        Crea l'overlay della griglia del cruciverba con migliore centraggio delle lettere
         """
         overlay = np.zeros((self.grid_height, self.grid_width, 4), dtype=np.uint8)
         cell_size = self.style['cell_size']
@@ -448,22 +447,20 @@ class CrosswordVideoGenerator:
         # Ottieni tutte le celle delle parole già rivelate
         revealed_cells = set()
         if not is_initial and highlight_word_index is not None:
-            # Include tutte le parole completamente rivelate (fino a highlight_word_index - 1)
             for i in range(highlight_word_index):
                 revealed_cells.update(self._get_word_cells(self.words[i]))
 
         min_x, min_y, _, _ = self.bounds
 
-        # Disegna tutte le celle valide
         for y, x in self.valid_cells:
             rel_y = y - min_y
             rel_x = x - min_x
             px = rel_x * cell_size
             py = rel_y * cell_size
 
-            # Crea la cella
-            cell = np.full((cell_size, cell_size, 4),
-                           [*bg_color, 255], dtype=np.uint8)
+            # Crea la cella come immagine PIL
+            cell_img = Image.new('RGBA', (cell_size, cell_size), (*bg_color, 255))
+            cell_draw = ImageDraw.Draw(cell_img)
 
             # Scegli il colore e lo spessore del bordo
             if is_initial:
@@ -475,13 +472,11 @@ class CrosswordVideoGenerator:
                 current_thickness = highlight_thickness if is_highlighted else normal_thickness
 
             # Disegna il bordo della cella
-            cv2.rectangle(cell, (0, 0), (cell_size - 1, cell_size - 1),
-                          (*current_border_color, 255), current_thickness)
+            cell_draw.rectangle([(0, 0), (cell_size - 1, cell_size - 1)],
+                                outline=(*current_border_color, 255),
+                                width=current_thickness)
 
-            # Aggiungi la lettera se:
-            # 1. NON è la griglia iniziale E
-            # 2. (La cella appartiene a una parola già rivelata O
-            #     è la parola corrente con show_letters True)
+            # Aggiungi la lettera se necessario
             should_show_letter = (
                     not is_initial and (
                     (y, x) in revealed_cells or
@@ -492,18 +487,37 @@ class CrosswordVideoGenerator:
             if should_show_letter:
                 letter = self.grid[y][x]
                 if letter != '_':
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    font_scale = self.style['font_scale']
-                    thickness = 2
-                    text_size = cv2.getTextSize(letter, font, font_scale, thickness)[0]
+                    # Usa una lettera di test per calcolare l'altezza massima del font
+                    test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                    max_bbox = self.grid_font.getbbox(test_letter)
+                    max_height = max_bbox[3] - max_bbox[1]
 
-                    text_x = int((cell_size - text_size[0]) / 2)
-                    text_y = int((cell_size + text_size[1]) / 2)
+                    # Ottieni le dimensioni effettive della lettera corrente
+                    bbox = self.grid_font.getbbox(letter.upper())
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
 
-                    cv2.putText(cell, letter, (text_x, text_y), font, font_scale,
-                                (*text_color, 255), thickness)
+                    # Calcola i margini disponibili
+                    margin_x = cell_size - text_width
+                    margin_y = cell_size - max_height  # usa l'altezza massima per il centraggio verticale
 
-            overlay[py:py + cell_size, px:px + cell_size] = cell
+                    # Calcola le posizioni di centraggio
+                    text_x = margin_x // 2
+                    text_y = margin_y // 2
+
+                    # Applica un offset di correzione se necessario (può essere regolato)
+                    y_offset = -2  # regola questo valore se necessario
+
+                    # Disegna la lettera con il nuovo centraggio
+                    cell_draw.text((text_x, text_y + y_offset), letter.upper(),
+                                   font=self.grid_font,
+                                   fill=(*text_color, 255))
+
+            # Converti la cella PIL in array numpy
+            cell_array = np.array(cell_img)
+
+            # Copia la cella nell'overlay principale
+            overlay[py:py + cell_size, px:px + cell_size] = cell_array
 
         return overlay
 
