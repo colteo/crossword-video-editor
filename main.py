@@ -1,5 +1,6 @@
 import cv2
 import json
+import textwrap
 import numpy as np
 from typing import Dict, List, Tuple, Set
 from dataclasses import dataclass
@@ -37,25 +38,66 @@ class CrosswordVideoGenerator:
         """
         self.template = template_data
         self.crossword = crossword_data
-
-        # Estrae i dati del cruciverba
         self.grid = np.array(crossword_data['grid'])
         self.words = crossword_data['words']
-
-        # Impostazioni di stile
         self.style = template_data['style_settings']['crossword']
         self.layout = template_data['layout']
-
-        # Calcola le dimensioni della griglia
         self.valid_cells = self._get_valid_cells()
         self.bounds = self._calculate_bounds()
         min_x, min_y, max_x, max_y = self.bounds
         self.grid_width = (max_x - min_x + 1) * self.style['cell_size']
         self.grid_height = (max_y - min_y + 1) * self.style['cell_size']
+        # Aggiungi la configurazione per il wrapping del testo
+        self.max_text_width = 500  # Larghezza massima in pixel per il testo
+        self.line_spacing = 1.5  # Spazio tra le righe (1.5 volte l'altezza del testo)
+
+    def _wrap_text(self, text: str, font, font_scale: float, thickness: int, max_width: int) -> List[str]:
+        """
+        Divide il testo in righe basandosi sulla larghezza massima.
+
+        Args:
+            text: Il testo da wrappare
+            font: Il font da utilizzare
+            font_scale: La scala del font
+            thickness: Lo spessore del testo
+            max_width: La larghezza massima in pixel
+
+        Returns:
+            Lista di stringhe, una per ogni riga
+        """
+        # Prima stima approssimativa dei caratteri per riga
+        test_text = "A" * 100
+        (test_width, _), _ = cv2.getTextSize(test_text, font, font_scale, thickness)
+        chars_per_pixel = len(test_text) / test_width
+        estimated_chars = int(max_width * chars_per_pixel * 0.85)  # 85% per sicurezza
+
+        # Dividi il testo in righe
+        wrapped_lines = textwrap.wrap(text, width=estimated_chars)
+
+        # Verifica e aggiusta le righe se necessario
+        final_lines = []
+        current_line = ""
+        words = text.split()
+
+        for word in words:
+            test_line = current_line + (" " if current_line else "") + word
+            (test_width, _), _ = cv2.getTextSize(test_line, font, font_scale, thickness)
+
+            if test_width <= max_width:
+                current_line = test_line
+            else:
+                if current_line:
+                    final_lines.append(current_line)
+                current_line = word
+
+        if current_line:
+            final_lines.append(current_line)
+
+        return final_lines
 
     def _create_clue_overlay(self, clue_text: str, pattern: Dict) -> Tuple[np.ndarray, Tuple[int, int]]:
         """
-        Crea l'overlay per l'indizio
+        Crea l'overlay per l'indizio con supporto per il wrapping del testo
 
         Args:
             clue_text: Testo dell'indizio
@@ -66,29 +108,56 @@ class CrosswordVideoGenerator:
         thickness = 2
         padding = 20
 
-        # Misura il testo
-        (text_width, text_height), _ = cv2.getTextSize(clue_text, font, font_scale, thickness)
+        # Dividi il testo in righe
+        text_lines = self._wrap_text(
+            clue_text,
+            font,
+            font_scale,
+            thickness,
+            self.max_text_width
+        )
+
+        # Calcola le dimensioni del testo
+        line_heights = []
+        line_widths = []
+        for line in text_lines:
+            (text_width, text_height), _ = cv2.getTextSize(line, font, font_scale, thickness)
+            line_heights.append(text_height)
+            line_widths.append(text_width)
+
+        # Calcola le dimensioni totali dell'overlay
+        max_line_width = max(line_widths)
+        total_text_height = sum(line_heights)
+        line_spacing_px = int(max(line_heights) * (self.line_spacing - 1))
+        total_height = total_text_height + (len(text_lines) - 1) * line_spacing_px
 
         # Crea l'immagine per l'indizio
-        width = text_width + 2 * padding
-        height = text_height + 2 * padding
+        width = max_line_width + 2 * padding
+        height = total_height + 2 * padding
         clue_overlay = np.zeros((height, width, 4), dtype=np.uint8)
 
         # Sfondo nero semi-trasparente
-        cv2.rectangle(clue_overlay, (0, 0), (width, height),
-                      (0, 0, 0, 200), -1)
+        cv2.rectangle(clue_overlay, (0, 0), (width, height), (0, 0, 0, 200), -1)
 
-        # Testo bianco
-        cv2.putText(clue_overlay, clue_text,
-                    (padding, height - padding),
-                    font, font_scale,
-                    (255, 255, 255, 255),
-                    thickness)
+        # Disegna ogni riga di testo
+        y_position = padding + line_heights[0]  # Inizia dal padding superiore
+        for i, line in enumerate(text_lines):
+            cv2.putText(
+                clue_overlay,
+                line,
+                (padding, y_position),
+                font,
+                font_scale,
+                (255, 255, 255, 255),
+                thickness
+            )
+            # Aggiorna la posizione y per la prossima riga
+            if i < len(text_lines) - 1:  # Se non è l'ultima riga
+                y_position += line_heights[i] + line_spacing_px
 
         return clue_overlay, (width, height)
 
-    def _get_clue_position(self, pattern: Dict, clue_size: Tuple[int, int], frame_size: Tuple[int, int]) -> Tuple[
-        int, int]:
+    def _get_clue_position(self, pattern: Dict, clue_size: Tuple[int, int], frame_size: Tuple[int, int]) -> Tuple[int, int]:
         """
         Calcola la posizione dell'indizio basandosi sulle coordinate specificate nel pattern
 
