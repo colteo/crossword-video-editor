@@ -16,7 +16,8 @@
       "start": 3.0,
       "end": 6.0,
       "pos_x": 433,
-      "pos_y": 1401
+      "pos_y": 1401,
+      "max_text_width": 495
     },
     {
       "type": "show_grid_word_01",
@@ -32,7 +33,8 @@
       "start": 8.0,
       "end": 11.0,
       "pos_x": 433,
-      "pos_v": 1401
+      "pos_v": 1401,
+      "max_text_width": 495
     },
     {
       "type": "show_grid_word_02",
@@ -47,9 +49,7 @@
       "background_color": [255, 255, 255],
       "highlight_color": [0, 255, 0],
       "text_color": [0, 0, 0],
-      "font_scale": 1.0,
-      "max_text_width": 400,
-      "line_spacing": 1.3
+      "font_scale": 1.0
     }
   },
   "layout": {

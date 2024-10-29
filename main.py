@@ -47,9 +47,9 @@ class CrosswordVideoGenerator:
         min_x, min_y, max_x, max_y = self.bounds
         self.grid_width = (max_x - min_x + 1) * self.style['cell_size']
         self.grid_height = (max_y - min_y + 1) * self.style['cell_size']
-        # Aggiungi la configurazione per il wrapping del testo
-        self.max_text_width = 500  # Larghezza massima in pixel per il testo
-        self.line_spacing = 1.5  # Spazio tra le righe (1.5 volte l'altezza del testo)
+        # Configurazione globale per il wrapping del testo
+        self.max_text_width = self.style.get('max_text_width', 500)
+        self.line_spacing = self.style.get('line_spacing', 1.5)
 
     def _wrap_text(self, text: str, font, font_scale: float, thickness: int, max_width: int) -> List[str]:
         """
@@ -104,9 +104,16 @@ class CrosswordVideoGenerator:
             pattern: Pattern di animazione con le informazioni di stile e posizione
         """
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = self.style['font_scale']
+        font_scale = pattern.get('font_scale', self.style['font_scale'])
         thickness = 2
-        padding = 20
+        padding = pattern.get('padding', 20)
+
+        # Usa la larghezza specificata nel pattern, altrimenti usa quella globale
+        max_width = pattern.get('max_text_width', self.max_text_width)
+        line_spacing = pattern.get('line_spacing', self.line_spacing)
+
+        # Ottieni il colore del testo dal pattern o usa il default (nero)
+        text_color = pattern.get('text_color', (0, 0, 0))
 
         # Dividi il testo in righe
         text_lines = self._wrap_text(
@@ -114,7 +121,7 @@ class CrosswordVideoGenerator:
             font,
             font_scale,
             thickness,
-            self.max_text_width
+            max_width
         )
 
         # Calcola le dimensioni del testo
@@ -128,16 +135,15 @@ class CrosswordVideoGenerator:
         # Calcola le dimensioni totali dell'overlay
         max_line_width = max(line_widths)
         total_text_height = sum(line_heights)
-        line_spacing_px = int(max(line_heights) * (self.line_spacing - 1))
+        line_spacing_px = int(max(line_heights) * (line_spacing - 1))
         total_height = total_text_height + (len(text_lines) - 1) * line_spacing_px
 
-        # Crea l'immagine per l'indizio
+        # Crea l'immagine per l'indizio con canale alpha completamente trasparente
         width = max_line_width + 2 * padding
         height = total_height + 2 * padding
         clue_overlay = np.zeros((height, width, 4), dtype=np.uint8)
 
-        # Sfondo nero semi-trasparente
-        cv2.rectangle(clue_overlay, (0, 0), (width, height), (0, 0, 0, 200), -1)
+        # Non aggiungiamo più il rettangolo dello sfondo
 
         # Disegna ogni riga di testo
         y_position = padding + line_heights[0]  # Inizia dal padding superiore
@@ -148,7 +154,7 @@ class CrosswordVideoGenerator:
                 (padding, y_position),
                 font,
                 font_scale,
-                (255, 255, 255, 255),
+                (*text_color, 255),  # Aggiungi alpha 255 al colore del testo
                 thickness
             )
             # Aggiorna la posizione y per la prossima riga
@@ -573,7 +579,7 @@ def main():
     """Funzione principale"""
     try:
         # Carica il template
-        with open('template.json', 'r') as f:
+        with open('template-reale.json', 'r') as f:
             template_data = json.load(f)
 
         # Carica i dati del cruciverba
@@ -584,7 +590,7 @@ def main():
         generator = CrosswordVideoGenerator(template_data, crossword_data)
 
         # Genera il video
-        generator.process_video('input_video.mp4', 'output_video.mp4')
+        generator.process_video('input_video_2.mp4', 'output_video.mp4')
 
     except FileNotFoundError as e:
         print(f"Errore: File non trovato - {e}")

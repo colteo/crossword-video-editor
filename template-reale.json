@@ -15,8 +15,10 @@
       "type": "show_clue_01",
       "start": 9.0,
       "end": 13.6,
-      "pos_x": "center",
-      "pos_v": 600
+      "pos_x": 433,
+      "pos_y": 1401,
+      "max_text_width": 495,
+      "text_color": [0, 0, 0]
     },
     {
       "type": "show_grid_word_01",
@@ -31,8 +33,10 @@
       "type": "show_clue_02",
       "start": 20.0,
       "end": 24.8,
-      "pos_x": "center",
-      "pos_v": 600
+      "pos_x": 433,
+      "pos_y": 1401,
+      "max_text_width": 495,
+      "text_color": [0, 0, 0]
     },
     {
       "type": "show_grid_word_02",
