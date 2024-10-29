@@ -3,43 +3,45 @@
   "animation_patterns": [
     {
       "type": "initial_grid",
-      "start": 1.0,
-      "end": 3.0
+      "start": 0.5,
+      "end": 3.6
     },
     {
       "type": "show_grid_word_01_empty",
-      "start": 3.0,
-      "end": 6.0
+      "start": 3.6,
+      "end": 10.8
     },
     {
       "type": "show_clue_01",
-      "start": 3.0,
-      "end": 6.0,
+      "start": 3.6,
+      "end": 9.1,
       "pos_x": 433,
       "pos_y": 1401,
-      "max_text_width": 495
+      "max_text_width": 495,
+      "text_color": [0, 0, 0]
     },
     {
       "type": "show_grid_word_01",
-      "start": 6.0,
-      "end": 8.0
+      "start": 10.8,
+      "end": 14.8
     },
     {
       "type": "show_grid_word_02_empty",
-      "start": 8.0,
-      "end": 11.0
+      "start": 14.8,
+      "end": 22.0
     },{
       "type": "show_clue_02",
-      "start": 8.0,
-      "end": 11.0,
+      "start": 14.8,
+      "end": 20.3,
       "pos_x": 433,
-      "pos_v": 1401,
-      "max_text_width": 495
+      "pos_y": 1401,
+      "max_text_width": 495,
+      "text_color": [0, 0, 0]
     },
     {
       "type": "show_grid_word_02",
-      "start": 11.0,
-      "end": 25.0
+      "start": 22.0,
+      "end": 26.0
     }
   ],
   "style_settings": {
@@ -49,7 +51,11 @@
       "background_color": [255, 255, 255],
       "highlight_color": [0, 255, 0],
       "text_color": [0, 0, 0],
-      "font_scale": 1.0
+      "font_scale": 1.0,
+      "clue_font": {
+        "size": 20,
+        "color": [0, 0, 0]
+      }
     }
   },
   "layout": {

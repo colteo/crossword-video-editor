@@ -5,6 +5,7 @@ import numpy as np
 from typing import Dict, List, Tuple, Set
 from dataclasses import dataclass
 from enum import Enum, auto
+from PIL import Image, ImageDraw, ImageFont
 
 class AnimationType(Enum):
     INITIAL_GRID = "initial_grid"
@@ -51,117 +52,114 @@ class CrosswordVideoGenerator:
         self.max_text_width = self.style.get('max_text_width', 500)
         self.line_spacing = self.style.get('line_spacing', 1.5)
 
-    def _wrap_text(self, text: str, font, font_scale: float, thickness: int, max_width: int) -> List[str]:
+        # Leggi la dimensione del font dalle impostazioni
+        font_settings = self.style.get('clue_font', {})
+        font_size = font_settings.get('size', 32)  # default 32 se non specificato
+
+        # Carica il font Press Start 2P con la dimensione dalle impostazioni
+        try:
+            self.clue_font = ImageFont.truetype("PressStart2P-Regular.ttf", font_size)
+            print(f"Font caricato con dimensione: {font_size}")
+        except IOError:
+            print("Font Press Start 2P non trovato. Assicurati di averlo installato nel sistema.")
+            self.clue_font = ImageFont.load_default()
+
+    def _get_font_height(self, font: ImageFont.FreeTypeFont) -> int:
         """
-        Divide il testo in righe basandosi sulla larghezza massima.
-
-        Args:
-            text: Il testo da wrappare
-            font: Il font da utilizzare
-            font_scale: La scala del font
-            thickness: Lo spessore del testo
-            max_width: La larghezza massima in pixel
-
-        Returns:
-            Lista di stringhe, una per ogni riga
+        Ottiene l'altezza del font usando get_bbox
         """
-        # Prima stima approssimativa dei caratteri per riga
-        test_text = "A" * 100
-        (test_width, _), _ = cv2.getTextSize(test_text, font, font_scale, thickness)
-        chars_per_pixel = len(test_text) / test_width
-        estimated_chars = int(max_width * chars_per_pixel * 0.85)  # 85% per sicurezza
+        bbox = font.getbbox("Aj")  # Usa lettere alte e basse per ottenere l'altezza completa
+        return bbox[3] - bbox[1]
 
-        # Dividi il testo in righe
-        wrapped_lines = textwrap.wrap(text, width=estimated_chars)
-
-        # Verifica e aggiusta le righe se necessario
-        final_lines = []
-        current_line = ""
+    def _wrap_text(self, text: str, font: ImageFont.FreeTypeFont, max_width: int) -> List[str]:
+        """
+        Divide il testo in righe basandosi sulla larghezza massima usando PIL
+        """
         words = text.split()
+        lines = []
+        current_line = []
+        current_width = 0
+
+        # Crea un'immagine temporanea per misurare il testo
+        temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(temp_img)
 
         for word in words:
-            test_line = current_line + (" " if current_line else "") + word
-            (test_width, _), _ = cv2.getTextSize(test_line, font, font_scale, thickness)
+            word_width = draw.textlength(word, font=font)
+            space_width = draw.textlength(" ", font=font)
 
-            if test_width <= max_width:
-                current_line = test_line
+            if current_width + word_width <= max_width:
+                current_line.append(word)
+                current_width += word_width + space_width
             else:
                 if current_line:
-                    final_lines.append(current_line)
-                current_line = word
+                    lines.append(" ".join(current_line))
+                current_line = [word]
+                current_width = word_width + space_width
 
         if current_line:
-            final_lines.append(current_line)
+            lines.append(" ".join(current_line))
 
-        return final_lines
+        return lines
 
     def _create_clue_overlay(self, clue_text: str, pattern: Dict) -> Tuple[np.ndarray, Tuple[int, int]]:
         """
-        Crea l'overlay per l'indizio con supporto per il wrapping del testo
-
-        Args:
-            clue_text: Testo dell'indizio
-            pattern: Pattern di animazione con le informazioni di stile e posizione
+        Crea l'overlay per l'indizio usando PIL per il rendering del font
         """
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = pattern.get('font_scale', self.style['font_scale'])
-        thickness = 2
         padding = pattern.get('padding', 20)
-
-        # Usa la larghezza specificata nel pattern, altrimenti usa quella globale
         max_width = pattern.get('max_text_width', self.max_text_width)
         line_spacing = pattern.get('line_spacing', self.line_spacing)
-
-        # Ottieni il colore del testo dal pattern o usa il default (nero)
         text_color = pattern.get('text_color', (0, 0, 0))
 
-        # Dividi il testo in righe
-        text_lines = self._wrap_text(
-            clue_text,
-            font,
-            font_scale,
-            thickness,
-            max_width
-        )
+        # Crea un'immagine temporanea per misurare il testo
+        temp_img = Image.new('RGBA', (max_width + padding * 2, 1000), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(temp_img)
 
-        # Calcola le dimensioni del testo
-        line_heights = []
-        line_widths = []
-        for line in text_lines:
-            (text_width, text_height), _ = cv2.getTextSize(line, font, font_scale, thickness)
-            line_heights.append(text_height)
-            line_widths.append(text_width)
+        # Wrapping del testo
+        words = clue_text.split()
+        lines = []
+        current_line = []
+        current_width = 0
 
-        # Calcola le dimensioni totali dell'overlay
-        max_line_width = max(line_widths)
-        total_text_height = sum(line_heights)
-        line_spacing_px = int(max(line_heights) * (line_spacing - 1))
-        total_height = total_text_height + (len(text_lines) - 1) * line_spacing_px
+        for word in words:
+            word_width = draw.textlength(word, font=self.clue_font)
+            space_width = draw.textlength(" ", font=self.clue_font)
 
-        # Crea l'immagine per l'indizio con canale alpha completamente trasparente
-        width = max_line_width + 2 * padding
-        height = total_height + 2 * padding
-        clue_overlay = np.zeros((height, width, 4), dtype=np.uint8)
+            if current_width + word_width <= max_width:
+                current_line.append(word)
+                current_width += word_width + space_width
+            else:
+                if current_line:
+                    lines.append(" ".join(current_line))
+                current_line = [word]
+                current_width = word_width + space_width
 
-        # Non aggiungiamo più il rettangolo dello sfondo
+        if current_line:
+            lines.append(" ".join(current_line))
 
-        # Disegna ogni riga di testo
-        y_position = padding + line_heights[0]  # Inizia dal padding superiore
-        for i, line in enumerate(text_lines):
-            cv2.putText(
-                clue_overlay,
-                line,
-                (padding, y_position),
-                font,
-                font_scale,
-                (*text_color, 255),  # Aggiungi alpha 255 al colore del testo
-                thickness
-            )
-            # Aggiorna la posizione y per la prossima riga
-            if i < len(text_lines) - 1:  # Se non è l'ultima riga
-                y_position += line_heights[i] + line_spacing_px
+        # Calcola l'altezza totale necessaria
+        line_height = self._get_font_height(self.clue_font)
+        total_height = len(lines) * line_height * line_spacing
 
-        return clue_overlay, (width, height)
+        # Crea l'immagine finale con le dimensioni corrette
+        img = Image.new('RGBA',
+                        (max_width + padding * 2,
+                         int(total_height) + padding * 2),
+                        (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+
+        # Disegna il testo
+        y = padding
+        for line in lines:
+            draw.text((padding, y), line,
+                      font=self.clue_font,
+                      fill=(*text_color, 255))
+            y += line_height * line_spacing
+
+        # Converti l'immagine PIL in array numpy per OpenCV
+        overlay = np.array(img)
+
+        return overlay, img.size
 
     def _get_clue_position(self, pattern: Dict, clue_size: Tuple[int, int], frame_size: Tuple[int, int]) -> Tuple[int, int]:
         """
@@ -579,7 +577,7 @@ def main():
     """Funzione principale"""
     try:
         # Carica il template
-        with open('template-reale.json', 'r') as f:
+        with open('template.json', 'r') as f:
             template_data = json.load(f)
 
         # Carica i dati del cruciverba
@@ -590,7 +588,7 @@ def main():
         generator = CrosswordVideoGenerator(template_data, crossword_data)
 
         # Genera il video
-        generator.process_video('input_video_2.mp4', 'output_video.mp4')
+        generator.process_video('input_video.mp4', 'output_video.mp4')
 
     except FileNotFoundError as e:
         print(f"Errore: File non trovato - {e}")
