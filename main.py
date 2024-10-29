@@ -106,6 +106,9 @@ class CrosswordVideoGenerator:
         """
         Crea l'overlay per l'indizio usando PIL per il rendering del font
         """
+        # Converti il testo in maiuscolo
+        clue_text = clue_text.upper()
+
         padding = pattern.get('padding', 20)
         max_width = pattern.get('max_text_width', self.max_text_width)
         line_spacing = pattern.get('line_spacing', self.line_spacing)
