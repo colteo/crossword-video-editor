@@ -519,66 +519,58 @@ class CrosswordVideoGenerator:
     @profile
     def _create_grid_overlay(self, highlight_word_index: int = None, show_letters: bool = False,
                              is_initial: bool = False, frame_number: int = None,
-                             timing: TimingInfo = None) -> np.ndarray:
-        """Create grid overlay with profiling of critical sections"""
-        with profile_section("Grid Setup"):
-            cell_size = self._get_cell_size()
-            grid_width = (self.bounds[2] - self.bounds[0] + 1) * cell_size
-            grid_height = (self.bounds[3] - self.bounds[1] + 1) * cell_size
-            overlay = np.zeros((grid_height, grid_width, 4), dtype=np.uint8)
+                             timing: TimingInfo = None, letter_animation_config: dict = None) -> np.ndarray:
+        """Create grid overlay with optimized letter rendering"""
+        cell_size = self._get_cell_size()
+        grid_width = (self.bounds[2] - self.bounds[0] + 1) * cell_size
+        grid_height = (self.bounds[3] - self.bounds[1] + 1) * cell_size
+        overlay = np.zeros((grid_height, grid_width, 4), dtype=np.uint8)
 
-        with profile_section("Cell Calculation"):
-            highlighted_cells = set()
-            if highlight_word_index is not None:
-                highlighted_cells = self._get_word_cells(self.words[highlight_word_index])
+        # Calcola le celle da evidenziare
+        highlighted_cells = set()
+        if highlight_word_index is not None:
+            highlighted_cells = self._get_word_cells(self.words[highlight_word_index])
 
-            revealed_cells = set()
-            if not is_initial and highlight_word_index is not None:
-                for i in range(highlight_word_index):
-                    revealed_cells.update(self._get_word_cells(self.words[i]))
+        # Calcola le celle rivelate
+        revealed_cells = set()
+        if not is_initial and highlight_word_index is not None:
+            for i in range(highlight_word_index):
+                revealed_cells.update(self._get_word_cells(self.words[i]))
 
-        with profile_section("Letter Visibility"):
-            visible_letters = set()
-            if (highlight_word_index is not None and show_letters and
-                    frame_number is not None and timing is not None):
-                current_word_letters = self._get_word_letters_sequence(
-                    self.words[highlight_word_index])
-                for i, (ly, lx, _) in enumerate(current_word_letters):
-                    if self._calculate_letter_visibility(frame_number, timing,
-                                                         i, len(current_word_letters)):
-                        visible_letters.add((ly, lx))
+        # Calcola le lettere visibili per l'animazione corrente
+        visible_letters = set()
+        if highlight_word_index is not None and show_letters and frame_number is not None and timing is not None:
+            current_word_letters = self._get_word_letters_sequence(self.words[highlight_word_index])
+            for i, (ly, lx, _) in enumerate(current_word_letters):
+                if self._calculate_letter_visibility(frame_number, timing, i,
+                                                     len(current_word_letters),
+                                                     letter_animation_config):  # Pass the config here
+                    visible_letters.add((ly, lx))
 
-        with profile_section("Grid Drawing"):
-            min_x, min_y, max_x, max_y = self.bounds
-            for y, x in self.valid_cells:
-                rel_y = y - min_y
-                rel_x = x - min_x
-                px = rel_x * cell_size
-                py = rel_y * cell_size
+        # Processa tutte le celle valide
+        min_x, min_y, _, _ = self.bounds
+        for y, x in self.valid_cells:
+            rel_y = y - min_y
+            rel_x = x - min_x
+            px = rel_x * cell_size
+            py = rel_y * cell_size
 
-                if is_initial:
-                    cell = self._cell_cache['initial_6']
-                else:
-                    is_highlighted = (y, x) in highlighted_cells
-                    cell_type = 'highlight_6' if is_highlighted else 'inactive_6'
-                    cell = self._cell_cache[cell_type]
+            letter = self.grid[y][x]
+            is_highlighted = (y, x) in highlighted_cells
+            should_show_letter = (y, x) in revealed_cells or (y, x) in visible_letters
 
+            if is_initial:
+                cell = self._cell_cache['initial_6']
                 overlay[py:py + cell_size, px:px + cell_size] = cell
-
-                should_show_letter = (
-                        (y, x) in revealed_cells or
-                        (y, x) in visible_letters
-                )
-
-                if should_show_letter:
-                    letter = self.grid[y][x]
-                    if letter != '_' and letter in self._letter_cache:
-                        letter_img = self._letter_cache[letter]
-                        alpha = letter_img[:, :, 3:4] / 255.0
-                        overlay[py:py + cell_size, px:px + cell_size] = (
-                                letter_img * alpha +
-                                overlay[py:py + cell_size, px:px + cell_size] * (1 - alpha)
-                        )
+            elif should_show_letter and letter != '_':
+                border_type = 'highlight' if is_highlighted else 'inactive'
+                composite_key = f'{border_type}_{letter}'
+                cell = self._composite_cache[composite_key]
+                overlay[py:py + cell_size, px:px + cell_size] = cell
+            else:
+                border_type = 'highlight' if is_highlighted else 'inactive'
+                cell = self._cell_cache[f'{border_type}_6']
+                overlay[py:py + cell_size, px:px + cell_size] = cell
 
         return overlay
 
@@ -770,22 +762,40 @@ class CrosswordVideoGenerator:
         return sequence
 
     def _calculate_letter_visibility(self, frame_number: int, timing: TimingInfo,
-                                     letter_index: int, total_letters: int) -> bool:
+                                     letter_index: int, total_letters: int,
+                                     animation_config: dict = None) -> bool:
         """
-        Determina se una lettera deve essere visibile o no
-
-        Args:
-            frame_number: Frame corrente
-            timing: Informazioni sul timing dell'animazione
-            letter_index: Indice della lettera nella sequenza
-            total_letters: Numero totale di lettere
-
-        Returns:
-            True se la lettera deve essere visibile, False altrimenti
+        Determina se una lettera deve essere visibile in base alla configurazione dell'animazione
         """
         total_duration = timing.end_frame - timing.start_frame
-        frames_per_letter = total_duration / total_letters
-        letter_appears_at = timing.start_frame + (letter_index * frames_per_letter)
+
+        # Usa configurazione default se non specificata
+        if not animation_config:
+            animation_config = {
+                "type": "sequential",
+                "time_percentage": 100
+            }
+
+        animation_type = animation_config.get('type', 'sequential')
+
+        if animation_type == 'sequential':
+            time_percentage = animation_config.get('time_percentage', 100) / 100
+            frames_per_letter = (total_duration * time_percentage) / total_letters
+            letter_appears_at = timing.start_frame + (letter_index * frames_per_letter)
+
+        elif animation_type == 'fixed_delay':
+            delay_frames = animation_config.get('delay_frames', 3)
+            letter_appears_at = timing.start_frame + (letter_index * delay_frames)
+
+        elif animation_type == 'groups':
+            group_size = animation_config.get('group_size', 2)
+            time_percentage = animation_config.get('time_percentage', 30) / 100
+            group_index = letter_index // group_size
+            frames_per_group = total_duration * time_percentage / ((total_letters + group_size - 1) // group_size)
+            letter_appears_at = timing.start_frame + (group_index * frames_per_group)
+
+        elif animation_type == 'instant':
+            letter_appears_at = timing.start_frame
 
         return frame_number >= letter_appears_at
 
@@ -842,12 +852,15 @@ class CrosswordVideoGenerator:
             self._overlay_image(frame, grid_overlay, positions['grid'])
 
         elif anim_type == 'show_grid_word':
+            # Passa la configurazione dell'animazione dal template
+            letter_animation_config = animation.get('letter_animation')
             grid_overlay = self._create_grid_overlay(
                 highlight_word_index=word_index,
                 show_letters=True,
                 is_initial=False,
                 frame_number=frame_number,
-                timing=timing
+                timing=timing,
+                letter_animation_config=letter_animation_config  # Nuovo parametro
             )
             positions = self._calculate_positions(frame.shape[1], frame.shape[0])
             self._overlay_image(frame, grid_overlay, positions['grid'])
@@ -867,15 +880,16 @@ class CrosswordVideoGenerator:
         inactive_color = (128, 128, 128)
         text_color = self._get_style_color('text_color', 'default_text_color')
 
-        # Cache per celle vuote con diversi bordi
+        # Inizializza tutte le cache
         self._cell_cache = {}
+        self._letter_cache = {}
+        self._composite_cache = {}  # Aggiunto questo
 
-        # Pre-calcola i colori più usati come tuple numpy per evitare conversioni ripetute
+        # Pre-calcola i colori più usati come array numpy
         self._cached_colors = {
-            'bg': np.array([*bg_color, 255], dtype=np.uint8),
-            'border': np.array([*border_color, 255], dtype=np.uint8),
-            'inactive': np.array([*inactive_color, 255], dtype=np.uint8),
-            'text': np.array([*text_color, 255], dtype=np.uint8)
+            'bg': np.array(bg_color + (255,), dtype=np.uint8),
+            'border': np.array(border_color + (255,), dtype=np.uint8),
+            'text': np.array(text_color + (255,), dtype=np.uint8)
         }
 
         # Crea celle base con diversi bordi
@@ -892,10 +906,10 @@ class CrosswordVideoGenerator:
 
             half_thickness = thickness / 2
             borders = [
-                half_thickness,  # left
-                half_thickness,  # top
-                cell_size - half_thickness,  # right
-                cell_size - half_thickness  # bottom
+                half_thickness,
+                half_thickness,
+                cell_size - half_thickness,
+                cell_size - half_thickness
             ]
 
             cell_draw.rectangle(
@@ -904,48 +918,42 @@ class CrosswordVideoGenerator:
                 width=thickness
             )
 
-            self._cell_cache[f'{border_type}_{thickness}'] = np.array(cell_img)
+            cell_array = np.array(cell_img)
+            self._cell_cache[f'{border_type}_{thickness}'] = cell_array
 
-        # Ottieni gli aggiustamenti dal template
-        grid_font_config = self.style.get('grid_font', {})
-        vertical_adj = grid_font_config.get('vertical_adjustment', -2)
-        horizontal_adj = grid_font_config.get('horizontal_adjustment', 0)
+            # Pre-genera tutte le combinazioni cella+lettera
+            if border_type != 'initial':  # Non serve per la griglia iniziale
+                grid_font_config = self.style.get('grid_font', {})
+                vertical_adj = grid_font_config.get('vertical_adjustment', -2)
+                horizontal_adj = grid_font_config.get('horizontal_adjustment', 0)
 
-        # Ottimizza la cache delle lettere con posizionamento migliorato
-        self._letter_cache = {}
-        test_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                effective_cell_size = cell_size - (thickness * 2)
 
-        # Pre-calcola le dimensioni della cella effettiva (interno del bordo)
-        effective_cell_size = cell_size - (thickness * 2)
+                for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                    # Crea una copia della cella base
+                    composite_img = Image.fromarray(cell_array.copy())
+                    draw = ImageDraw.Draw(composite_img)
 
-        for letter in test_letters:
-            # Crea un'immagine temporanea per misurare le dimensioni esatte della lettera
-            temp_img = Image.new('RGBA', (cell_size * 2, cell_size * 2), (0, 0, 0, 0))
-            temp_draw = ImageDraw.Draw(temp_img)
+                    # Ottieni le dimensioni della lettera
+                    bbox = self.grid_font.getbbox(letter)
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
 
-            # Ottieni le dimensioni effettive della lettera
-            bbox = self.grid_font.getbbox(letter)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
+                    # Calcola la posizione centrata
+                    x_offset = (effective_cell_size - text_width) // 2 + thickness + horizontal_adj
+                    y_offset = (effective_cell_size - text_height) // 2 + thickness + vertical_adj
 
-            # Calcola gli offset con gli aggiustamenti dal template
-            x_offset = (effective_cell_size - text_width) // 2 + thickness + horizontal_adj
-            y_offset = (effective_cell_size - text_height) // 2 + thickness + vertical_adj
+                    # Disegna la lettera
+                    draw.text(
+                        (x_offset, y_offset),
+                        letter,
+                        font=self.grid_font,
+                        fill=(*text_color, 255)
+                    )
 
-            # Crea l'immagine finale per la lettera
-            letter_img = Image.new('RGBA', (cell_size, cell_size), (0, 0, 0, 0))
-            letter_draw = ImageDraw.Draw(letter_img)
-
-            # Disegna la lettera nella posizione calcolata
-            letter_draw.text(
-                (x_offset, y_offset),
-                letter,
-                font=self.grid_font,
-                fill=(*text_color, 255)
-            )
-
-            # Converti in numpy array e salva nella cache
-            self._letter_cache[letter] = np.array(letter_img)
+                    # Salva nella cache composita
+                    key = f'{border_type}_{letter}'
+                    self._composite_cache[key] = np.array(composite_img)
 
     def _precalculate_animation_timings(self) -> Dict:
         """Pre-calcola i timing delle animazioni per evitare calcoli ripetuti"""

@@ -30,7 +30,11 @@
             {
               "type": "show_grid_word",
               "start": 10.8,
-              "end": 14.8
+              "end": 14.8,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 10
+              }
             }
           ]
         },
@@ -55,7 +59,10 @@
             {
               "type": "show_grid_word",
               "start": 22.0,
-              "end": 26.0
+              "end": 26.0,
+              "letter_animation": {
+                "type": "instant"
+              }
             }
           ]
         }
