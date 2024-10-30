@@ -76,7 +76,9 @@
       },
       "grid_font": {
         "size": 46,
-        "color": [0, 0, 0]
+        "color": [0, 0, 0],
+        "vertical_adjustment": 4,
+        "horizontal_adjustment": 2
       }
     }
   },

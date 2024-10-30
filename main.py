@@ -878,8 +878,8 @@ class CrosswordVideoGenerator:
             'text': np.array([*text_color, 255], dtype=np.uint8)
         }
 
-        # Crea celle base con diversi bordi - usiamo un singolo spessore invece di un loop
-        thickness = 6  # Rimuoviamo il loop non necessario
+        # Crea celle base con diversi bordi
+        thickness = 6
         for border_type in ['initial', 'inactive', 'highlight']:
             current_border_color = {
                 'initial': border_color,
@@ -891,7 +891,6 @@ class CrosswordVideoGenerator:
             cell_draw = ImageDraw.Draw(cell_img)
 
             half_thickness = thickness / 2
-            # Pre-calcola i bordi una volta sola
             borders = [
                 half_thickness,  # left
                 half_thickness,  # top
@@ -905,35 +904,47 @@ class CrosswordVideoGenerator:
                 width=thickness
             )
 
-            self._cell_cache[f'{border_type}_{thickness}'] = np.array(cell_img)  # Converti subito in numpy array
+            self._cell_cache[f'{border_type}_{thickness}'] = np.array(cell_img)
 
-        # Ottimizza la cache delle lettere
+        # Ottieni gli aggiustamenti dal template
+        grid_font_config = self.style.get('grid_font', {})
+        vertical_adj = grid_font_config.get('vertical_adjustment', -2)
+        horizontal_adj = grid_font_config.get('horizontal_adjustment', 0)
+
+        # Ottimizza la cache delle lettere con posizionamento migliorato
         self._letter_cache = {}
-        # Pre-calcola valori comuni per tutte le lettere
-        test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        max_bbox = self.grid_font.getbbox(test_letter)
-        max_height = max_bbox[3] - max_bbox[1]
-        margin_y = cell_size - max_height
-        y_offset = -2
-        text_y = margin_y // 2
+        test_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-        for letter in test_letter:
+        # Pre-calcola le dimensioni della cella effettiva (interno del bordo)
+        effective_cell_size = cell_size - (thickness * 2)
+
+        for letter in test_letters:
+            # Crea un'immagine temporanea per misurare le dimensioni esatte della lettera
+            temp_img = Image.new('RGBA', (cell_size * 2, cell_size * 2), (0, 0, 0, 0))
+            temp_draw = ImageDraw.Draw(temp_img)
+
+            # Ottieni le dimensioni effettive della lettera
             bbox = self.grid_font.getbbox(letter)
             text_width = bbox[2] - bbox[0]
-            margin_x = cell_size - text_width
-            text_x = margin_x // 2
+            text_height = bbox[3] - bbox[1]
 
+            # Calcola gli offset con gli aggiustamenti dal template
+            x_offset = (effective_cell_size - text_width) // 2 + thickness + horizontal_adj
+            y_offset = (effective_cell_size - text_height) // 2 + thickness + vertical_adj
+
+            # Crea l'immagine finale per la lettera
             letter_img = Image.new('RGBA', (cell_size, cell_size), (0, 0, 0, 0))
             letter_draw = ImageDraw.Draw(letter_img)
 
+            # Disegna la lettera nella posizione calcolata
             letter_draw.text(
-                (text_x, text_y + y_offset),
+                (x_offset, y_offset),
                 letter,
                 font=self.grid_font,
                 fill=(*text_color, 255)
             )
 
-            # Converti subito in numpy array per evitare conversioni multiple
+            # Converti in numpy array e salva nella cache
             self._letter_cache[letter] = np.array(letter_img)
 
     def _precalculate_animation_timings(self) -> Dict:
@@ -996,6 +1007,13 @@ class CrosswordVideoGenerator:
                             self._apply_word_animation(
                                 frame, anim['word_index'],
                                 anim['data'], timing, frame_number)
+
+    def _get_letter_adjustments(self) -> Tuple[int, int]:
+        """Ottiene gli aggiustamenti di posizionamento delle lettere dalla configurazione"""
+        grid_font_config = self.style.get('grid_font', {})
+        vertical_adj = grid_font_config.get('vertical_adjustment', -2)
+        horizontal_adj = grid_font_config.get('horizontal_adjustment', 0)
+        return horizontal_adj, vertical_adj
 
 def main():
     try:
