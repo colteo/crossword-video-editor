@@ -215,134 +215,92 @@ class CrosswordVideoGenerator:
 
         return (x, y)
 
+    def _get_word_index_from_animation_type(self, anim_type: AnimationType) -> int:
+        """
+        Estrae l'indice della parola dal tipo di animazione
+
+        Args:
+            anim_type: Tipo di animazione (enum AnimationType)
+
+        Returns:
+            Indice della parola (0-based)
+        """
+        name = anim_type.name
+
+        # Cerca il numero alla fine del nome usando una regex
+        import re
+        if "_EMPTY" in name:
+            # Per le animazioni tipo SHOW_GRID_WORD_01_EMPTY
+            match = re.search(r'_(\d+)_EMPTY$', name)
+        else:
+            # Per le animazioni tipo SHOW_GRID_WORD_01 o SHOW_CLUE_01
+            match = re.search(r'_(\d+)$', name)
+
+        if match:
+            number = int(match.group(1))
+            return number - 1  # Convertiamo in 0-based index
+
+        raise ValueError(f"Non è possibile estrarre l'indice da {name}")
+
     def _apply_animation(self, frame: np.ndarray, pattern: Dict, timing: TimingInfo, frame_number: int):
-        """
-        Applica una specifica animazione al frame
-        """
+        """Applica una specifica animazione al frame"""
         anim_type = AnimationType(pattern['type'])
 
-        if anim_type == AnimationType.INITIAL_GRID:
+        # Gestione di tutte le animazioni show_grid_word
+        if anim_type in [
+            AnimationType.SHOW_GRID_WORD_01,
+            AnimationType.SHOW_GRID_WORD_02,
+            AnimationType.SHOW_GRID_WORD_03,
+            AnimationType.SHOW_GRID_WORD_04,
+            AnimationType.SHOW_GRID_WORD_05
+        ]:
+            word_index = self._get_word_index_from_animation_type(anim_type)
+
+            grid_overlay = self._create_grid_overlay(
+                highlight_word_index=word_index,
+                show_letters=True,
+                is_initial=False,
+                frame_number=frame_number,
+                timing=timing
+            )
+            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
+            self._overlay_image(frame, grid_overlay, positions['grid'])
+
+        # Gestione delle animazioni empty
+        elif anim_type in [
+            AnimationType.SHOW_GRID_WORD_01_EMPTY,
+            AnimationType.SHOW_GRID_WORD_02_EMPTY,
+            AnimationType.SHOW_GRID_WORD_03_EMPTY,
+            AnimationType.SHOW_GRID_WORD_04_EMPTY,
+            AnimationType.SHOW_GRID_WORD_05_EMPTY
+        ]:
+            word_index = self._get_word_index_from_animation_type(anim_type)
+
+            grid_overlay = self._create_grid_overlay(
+                highlight_word_index=word_index,
+                show_letters=False,
+                is_initial=False
+            )
+            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
+            self._overlay_image(frame, grid_overlay, positions['grid'])
+
+        # Gestione delle animazioni clue
+        elif anim_type in [
+            AnimationType.SHOW_CLUE_01,
+            AnimationType.SHOW_CLUE_02,
+            AnimationType.SHOW_CLUE_03,
+            AnimationType.SHOW_CLUE_04,
+            AnimationType.SHOW_CLUE_05
+        ]:
+            word_index = self._get_word_index_from_animation_type(anim_type)
+            clue_text = self.words[word_index]['clue']
+            clue_overlay, clue_size = self._create_clue_overlay(clue_text, pattern)
+            position = self._get_clue_position(pattern, clue_size, (frame.shape[1], frame.shape[0]))
+            self._overlay_image(frame, clue_overlay, position)
+
+        # Gestione della griglia iniziale
+        elif anim_type == AnimationType.INITIAL_GRID:
             grid_overlay = self._create_grid_overlay(is_initial=True)
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_CLUE_01:
-            clue_text = self.words[0]['clue']
-            clue_overlay, clue_size = self._create_clue_overlay(clue_text, pattern)
-            position = self._get_clue_position(pattern, clue_size, (frame.shape[1], frame.shape[0]))
-            self._overlay_image(frame, clue_overlay, position)
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_01_EMPTY:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=0,
-                show_letters=False,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_01:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=0,
-                show_letters=True,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_CLUE_02:
-            clue_text = self.words[1]['clue']
-            clue_overlay, clue_size = self._create_clue_overlay(clue_text, pattern)
-            position = self._get_clue_position(pattern, clue_size, (frame.shape[1], frame.shape[0]))
-            self._overlay_image(frame, clue_overlay, position)
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_02_EMPTY:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=1,
-                show_letters=False,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_02:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=1,
-                show_letters=True,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_CLUE_03:
-            clue_text = self.words[2]['clue']
-            clue_overlay, clue_size = self._create_clue_overlay(clue_text, pattern)
-            position = self._get_clue_position(pattern, clue_size, (frame.shape[1], frame.shape[0]))
-            self._overlay_image(frame, clue_overlay, position)
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_03_EMPTY:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=2,
-                show_letters=False,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_03:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=2,
-                show_letters=True,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_CLUE_04:
-            clue_text = self.words[3]['clue']
-            clue_overlay, clue_size = self._create_clue_overlay(clue_text, pattern)
-            position = self._get_clue_position(pattern, clue_size, (frame.shape[1], frame.shape[0]))
-            self._overlay_image(frame, clue_overlay, position)
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_04_EMPTY:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=3,
-                show_letters=False,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_04:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=3,
-                show_letters=True,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_CLUE_05:
-            clue_text = self.words[4]['clue']
-            clue_overlay, clue_size = self._create_clue_overlay(clue_text, pattern)
-            position = self._get_clue_position(pattern, clue_size, (frame.shape[1], frame.shape[0]))
-            self._overlay_image(frame, clue_overlay, position)
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_05_EMPTY:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=4,
-                show_letters=False,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        elif anim_type == AnimationType.SHOW_GRID_WORD_05:
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=4,
-                show_letters=True,
-                is_initial=False
-            )
             positions = self._calculate_positions(frame.shape[1], frame.shape[0])
             self._overlay_image(frame, grid_overlay, positions['grid'])
 
@@ -422,35 +380,31 @@ class CrosswordVideoGenerator:
         return (min_x, min_y, max_x, max_y)
 
     def _create_grid_overlay(self, highlight_word_index: int = None, show_letters: bool = False,
-                             is_initial: bool = False) -> np.ndarray:
+                             is_initial: bool = False, frame_number: int = None,
+                             timing: TimingInfo = None) -> np.ndarray:
         """
-        Crea l'overlay della griglia del cruciverba con bordi corretti per evitare sovrapposizioni.
+        Crea l'overlay della griglia del cruciverba con lettere che appaiono sequenzialmente
         """
         cell_size = self.style['cell_size']
         grid_width = (self.bounds[2] - self.bounds[0] + 1) * cell_size
         grid_height = (self.bounds[3] - self.bounds[1] + 1) * cell_size
 
-        # Crea l'immagine PIL dell'overlay
         overlay_img = Image.new('RGBA', (grid_width, grid_height), (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay_img)
 
-        # Converti i colori da lista a tuple
         bg_color = tuple(self.style['background_color'])
         black_color = tuple(self.style['border_color'])
         grey_color = (128, 128, 128)
         highlight_color = tuple(self.style['highlight_color'])
         text_color = tuple(self.style['text_color'])
 
-        # Definisci gli spessori dei bordi
-        highlight_thickness = 6  # Regola lo spessore secondo le tue preferenze
-        normal_thickness = 6  # Regola lo spessore secondo le tue preferenze
+        highlight_thickness = 6
+        normal_thickness = 6
 
-        # Se c'è una parola da evidenziare, ottieni le sue celle
         highlighted_cells = set()
         if highlight_word_index is not None:
             highlighted_cells = self._get_word_cells(self.words[highlight_word_index])
 
-        # Ottieni tutte le celle delle parole già rivelate
         revealed_cells = set()
         if not is_initial and highlight_word_index is not None:
             for i in range(highlight_word_index):
@@ -458,8 +412,14 @@ class CrosswordVideoGenerator:
 
         min_x, min_y, max_x, max_y = self.bounds
 
-        # Prepara un set per un accesso rapido alle coordinate delle celle valide
-        valid_cells_set = set(self.valid_cells)
+        # Ottieni la sequenza di lettere per la parola corrente
+        current_word_letters = []
+        visible_letters = set()  # Set di coordinate delle lettere da mostrare
+        if highlight_word_index is not None and show_letters and frame_number is not None and timing is not None:
+            current_word_letters = self._get_word_letters_sequence(self.words[highlight_word_index])
+            for i, (ly, lx, _) in enumerate(current_word_letters):
+                if self._calculate_letter_visibility(frame_number, timing, i, len(current_word_letters)):
+                    visible_letters.add((ly, lx))
 
         for y, x in self.valid_cells:
             rel_y = y - min_y
@@ -467,11 +427,9 @@ class CrosswordVideoGenerator:
             px = rel_x * cell_size
             py = rel_y * cell_size
 
-            # Crea la cella come immagine PIL
             cell_img = Image.new('RGBA', (cell_size, cell_size), (*bg_color, 255))
             cell_draw = ImageDraw.Draw(cell_img)
 
-            # Scegli il colore e lo spessore del bordo
             if is_initial:
                 current_border_color = black_color
                 current_thickness = normal_thickness
@@ -481,64 +439,50 @@ class CrosswordVideoGenerator:
                 current_thickness = highlight_thickness if is_highlighted else normal_thickness
 
             half_thickness = current_thickness / 2
-
-            # Definisci le coordinate del rettangolo interno
             left = half_thickness
             top = half_thickness
             right = cell_size - half_thickness
             bottom = cell_size - half_thickness
 
-            # Disegna il rettangolo della cella con il contorno
             cell_draw.rectangle(
                 [left, top, right, bottom],
                 outline=(*current_border_color, 255),
                 width=current_thickness
             )
 
-            # Aggiungi la lettera se necessario
+            # Gestione delle lettere
             should_show_letter = (
-                    not is_initial and (
-                    (y, x) in revealed_cells or
-                    (show_letters and (y, x) in highlighted_cells)
-            )
+                    (y, x) in revealed_cells or  # Lettere delle parole già rivelate
+                    (y, x) in visible_letters  # Lettere della parola corrente che devono essere visibili
             )
 
             if should_show_letter:
                 letter = self.grid[y][x]
                 if letter != '_':
-                    # Usa una lettera di test per calcolare l'altezza massima del font
                     test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                     max_bbox = self.grid_font.getbbox(test_letter)
                     max_height = max_bbox[3] - max_bbox[1]
 
-                    # Ottieni le dimensioni effettive della lettera corrente
                     bbox = self.grid_font.getbbox(letter.upper())
                     text_width = bbox[2] - bbox[0]
-                    text_height = bbox[3] - bbox[1]
 
-                    # Calcola i margini disponibili
                     margin_x = cell_size - text_width
-                    margin_y = cell_size - max_height  # usa l'altezza massima per il centraggio verticale
+                    margin_y = cell_size - max_height
 
-                    # Calcola le posizioni di centraggio
                     text_x = margin_x // 2
                     text_y = margin_y // 2
+                    y_offset = -2
 
-                    # Applica un offset di correzione se necessario (può essere regolato)
-                    y_offset = -2  # regola questo valore se necessario
+                    cell_draw.text(
+                        (text_x, text_y + y_offset),
+                        letter.upper(),
+                        font=self.grid_font,
+                        fill=text_color
+                    )
 
-                    # Disegna la lettera con il nuovo centraggio
-                    cell_draw.text((text_x, text_y + y_offset), letter.upper(),
-                                   font=self.grid_font,
-                                   fill=(*text_color, 255))
-
-            # Incolla la cella nell'overlay principale
             overlay_img.paste(cell_img, (px, py))
 
-        # Converti l'immagine PIL dell'overlay in array numpy
-        overlay = np.array(overlay_img)
-
-        return overlay
+        return np.array(overlay_img)
 
     def _calculate_positions(self, frame_width: int, frame_height: int) -> Dict[str, Tuple[int, int]]:
         """Calcola le posizioni degli elementi nel frame"""
@@ -641,6 +585,79 @@ class CrosswordVideoGenerator:
 
         print(f"Elaborazione video completata. Output salvato in: {output_video_path}")
 
+    def _get_word_letters_sequence(self, word: Dict) -> List[Tuple[int, int, str]]:
+        """
+        Ottiene la sequenza di lettere per una parola con le loro coordinate
+
+        Args:
+            word: Dizionario contenente le informazioni della parola
+
+        Returns:
+            Lista di tuple (y, x, lettera) in ordine di apparizione
+        """
+        sequence = []
+        x, y = word['x'], word['y']
+        text = word['text']
+        is_horizontal = word['is_horizontal']
+
+        for i, letter in enumerate(text):
+            if letter != '_':
+                if is_horizontal:
+                    sequence.append((y, x + i, letter))
+                else:
+                    sequence.append((y + i, x, letter))
+
+        return sequence
+
+    def _calculate_letter_visibility(self, frame_number: int, timing: TimingInfo,
+                                     letter_index: int, total_letters: int) -> bool:
+        """
+        Determina se una lettera deve essere visibile o no
+
+        Args:
+            frame_number: Frame corrente
+            timing: Informazioni sul timing dell'animazione
+            letter_index: Indice della lettera nella sequenza
+            total_letters: Numero totale di lettere
+
+        Returns:
+            True se la lettera deve essere visibile, False altrimenti
+        """
+        total_duration = timing.end_frame - timing.start_frame
+        frames_per_letter = total_duration / total_letters
+        letter_appears_at = timing.start_frame + (letter_index * frames_per_letter)
+
+        return frame_number >= letter_appears_at
+
+    def _draw_letter(self, draw: ImageDraw.Draw, letter: str, cell_size: int,
+                     text_color: Tuple[int, int, int], opacity: int):
+        """
+        Disegna una lettera nella cella con la data opacità mantenendo il colore corretto
+        """
+        test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        max_bbox = self.grid_font.getbbox(test_letter)
+        max_height = max_bbox[3] - max_bbox[1]
+
+        bbox = self.grid_font.getbbox(letter.upper())
+        text_width = bbox[2] - bbox[0]
+
+        margin_x = cell_size - text_width
+        margin_y = cell_size - max_height
+
+        text_x = margin_x // 2
+        text_y = margin_y // 2
+        y_offset = -2
+
+        # Usiamo il colore del testo con l'opacità desiderata
+        # Manteniamo il colore originale e modifichiamo solo il canale alpha
+        text_color_with_opacity = (text_color[0], text_color[1], text_color[2], opacity)
+
+        draw.text(
+            (text_x, text_y + y_offset),
+            letter.upper(),
+            font=self.grid_font,
+            fill=text_color_with_opacity
+        )
 
 def main():
     """Funzione principale"""
