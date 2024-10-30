@@ -21,10 +21,11 @@
               "type": "show_clue",
               "start": 3.6,
               "end": 9.1,
-              "pos_x": 433,
-              "pos_y": 1401,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
-              "text_color": [0, 0, 0]
+              "text_color": [0, 0, 0],
+              "text_align": "center"
             },
             {
               "type": "show_grid_word",
@@ -45,10 +46,11 @@
               "type": "show_clue",
               "start": 14.8,
               "end": 20.3,
-              "pos_x": 433,
-              "pos_y": 1401,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
-              "text_color": [0, 0, 0]
+              "text_color": [0, 0, 0],
+              "text_align": "center"
             },
             {
               "type": "show_grid_word",
@@ -69,7 +71,7 @@
       "text_color": [0, 0, 0],
       "font_scale": 1.0,
       "clue_font": {
-        "size": 20,
+        "size": 28,
         "color": [0, 0, 0]
       },
       "grid_font": {

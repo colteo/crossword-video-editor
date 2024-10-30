@@ -334,6 +334,13 @@ class CrosswordVideoGenerator:
     def _create_clue_overlay(self, clue_text: str, pattern: Dict) -> Tuple[np.ndarray, Tuple[int, int]]:
         """
         Crea l'overlay per l'indizio usando PIL per il rendering del font
+
+        Args:
+            clue_text: Testo dell'indizio
+            pattern: Dictionary con le impostazioni di stile e posizionamento
+
+        Returns:
+            Tuple[np.ndarray, Tuple[int, int]]: Overlay dell'indizio e le sue dimensioni
         """
         # Converti il testo in maiuscolo
         clue_text = clue_text.upper()
@@ -342,6 +349,8 @@ class CrosswordVideoGenerator:
         max_width = pattern.get('max_text_width', self.max_text_width)
         line_spacing = pattern.get('line_spacing', self.line_spacing)
         text_color = pattern.get('text_color', (0, 0, 0))
+        # Aggiungi supporto per l'allineamento, default a 'left'
+        text_align = pattern.get('text_align', 'left')
 
         # Crea un'immagine temporanea per misurare il testo
         temp_img = Image.new('RGBA', (max_width + padding * 2, 1000), (0, 0, 0, 0))
@@ -380,10 +389,19 @@ class CrosswordVideoGenerator:
                         (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        # Disegna il testo
+        # Disegna il testo con l'allineamento specificato
         y = padding
         for line in lines:
-            draw.text((padding, y), line,
+            # Calcola la posizione x in base all'allineamento
+            line_width = draw.textlength(line, font=self.clue_font)
+            if text_align == 'center':
+                x = (max_width - line_width) / 2 + padding
+            elif text_align == 'right':
+                x = max_width - line_width + padding
+            else:  # 'left' o qualsiasi altro valore
+                x = padding
+
+            draw.text((x, y), line,
                       font=self.clue_font,
                       fill=(*text_color, 255))
             y += line_height * line_spacing
