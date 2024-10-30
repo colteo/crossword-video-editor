@@ -381,19 +381,20 @@ class CrosswordVideoGenerator:
     def _create_grid_overlay(self, highlight_word_index: int = None, show_letters: bool = False,
                              is_initial: bool = False, frame_number: int = None,
                              timing: TimingInfo = None) -> np.ndarray:
-        """
-        Crea l'overlay della griglia del cruciverba utilizzando il sistema di cache
-        """
+        """Ottimizzazione della creazione dell'overlay della griglia"""
         cell_size = self._get_cell_size()
         grid_width = (self.bounds[2] - self.bounds[0] + 1) * cell_size
         grid_height = (self.bounds[3] - self.bounds[1] + 1) * cell_size
 
-        overlay_img = Image.new('RGBA', (grid_width, grid_height), (0, 0, 0, 0))
+        # Crea l'overlay direttamente come numpy array
+        overlay = np.zeros((grid_height, grid_width, 4), dtype=np.uint8)
 
+        # Pre-calcola le celle evidenziate
         highlighted_cells = set()
         if highlight_word_index is not None:
             highlighted_cells = self._get_word_cells(self.words[highlight_word_index])
 
+        # Pre-calcola le celle rivelate
         revealed_cells = set()
         if not is_initial and highlight_word_index is not None:
             for i in range(highlight_word_index):
@@ -401,43 +402,42 @@ class CrosswordVideoGenerator:
 
         min_x, min_y, max_x, max_y = self.bounds
 
-        # Ottieni la sequenza di lettere visibili
+        # Pre-calcola le lettere visibili
         visible_letters = set()
         if highlight_word_index is not None and show_letters and frame_number is not None and timing is not None:
             current_word_letters = self._get_word_letters_sequence(self.words[highlight_word_index])
-            for i, (ly, lx, _) in enumerate(current_word_letters):
-                if self._calculate_letter_visibility(frame_number, timing, i, len(current_word_letters)):
-                    visible_letters.add((ly, lx))
+            visible_letters = {(ly, lx) for i, (ly, lx, _) in enumerate(current_word_letters)
+                               if self._calculate_letter_visibility(frame_number, timing, i, len(current_word_letters))}
 
+        # Usa numpy per operazioni vettorizzate dove possibile
         for y, x in self.valid_cells:
             rel_y = y - min_y
             rel_x = x - min_x
-            px = rel_x * cell_size
             py = rel_y * cell_size
+            px = rel_x * cell_size
 
-            # Determina il tipo di cella da usare
             if is_initial:
-                cell_img = self._cell_cache['initial_6'].copy()
+                cell = self._cell_cache['initial_6']
             else:
                 is_highlighted = (y, x) in highlighted_cells
                 cell_type = 'highlight_6' if is_highlighted else 'inactive_6'
-                cell_img = self._cell_cache[cell_type].copy()
+                cell = self._cell_cache[cell_type]
 
-            # Aggiungi la lettera se necessario
-            should_show_letter = (
-                    (y, x) in revealed_cells or
-                    (y, x) in visible_letters
-            )
+            # Usa slicing numpy invece di paste
+            overlay[py:py + cell_size, px:px + cell_size] = cell
 
+            should_show_letter = ((y, x) in revealed_cells or (y, x) in visible_letters)
             if should_show_letter:
                 letter = self.grid[y][x]
                 if letter != '_' and letter in self._letter_cache:
-                    # Sovrapponi la lettera cached alla cella
-                    cell_img.paste(self._letter_cache[letter], (0, 0), self._letter_cache[letter])
+                    letter_img = self._letter_cache[letter]
+                    # Applica la lettera usando operazioni numpy
+                    alpha = letter_img[:, :, 3:4] / 255.0
+                    overlay[py:py + cell_size, px:px + cell_size] = (
+                            letter_img * alpha + overlay[py:py + cell_size, px:px + cell_size] * (1 - alpha)
+                    )
 
-            overlay_img.paste(cell_img, (px, py))
-
-        return np.array(overlay_img)
+        return overlay
 
     def _calculate_positions(self, frame_width: int, frame_height: int) -> Dict[str, Tuple[int, int]]:
         """Calcola le posizioni degli elementi nel frame"""
@@ -649,52 +649,59 @@ class CrosswordVideoGenerator:
         # Cache per celle vuote con diversi bordi
         self._cell_cache = {}
 
-        # Crea celle base con diversi bordi
-        for thickness in [6]:  # Possiamo aggiungere altri spessori se necessario
-            for border_type in ['initial', 'inactive', 'highlight']:
-                current_border_color = {
-                    'initial': border_color,
-                    'inactive': inactive_color,
-                    'highlight': self._get_style_color('highlight_color', 'default_highlight_color')
-                }[border_type]
+        # Pre-calcola i colori più usati come tuple numpy per evitare conversioni ripetute
+        self._cached_colors = {
+            'bg': np.array([*bg_color, 255], dtype=np.uint8),
+            'border': np.array([*border_color, 255], dtype=np.uint8),
+            'inactive': np.array([*inactive_color, 255], dtype=np.uint8),
+            'text': np.array([*text_color, 255], dtype=np.uint8)
+        }
 
-                cell_img = Image.new('RGBA', (cell_size, cell_size), (*bg_color, 255))
-                cell_draw = ImageDraw.Draw(cell_img)
+        # Crea celle base con diversi bordi - usiamo un singolo spessore invece di un loop
+        thickness = 6  # Rimuoviamo il loop non necessario
+        for border_type in ['initial', 'inactive', 'highlight']:
+            current_border_color = {
+                'initial': border_color,
+                'inactive': inactive_color,
+                'highlight': self._get_style_color('highlight_color', 'default_highlight_color')
+            }[border_type]
 
-                half_thickness = thickness / 2
-                left = half_thickness
-                top = half_thickness
-                right = cell_size - half_thickness
-                bottom = cell_size - half_thickness
+            cell_img = Image.new('RGBA', (cell_size, cell_size), (*bg_color, 255))
+            cell_draw = ImageDraw.Draw(cell_img)
 
-                cell_draw.rectangle(
-                    [left, top, right, bottom],
-                    outline=(*current_border_color, 255),
-                    width=thickness
-                )
+            half_thickness = thickness / 2
+            # Pre-calcola i bordi una volta sola
+            borders = [
+                half_thickness,  # left
+                half_thickness,  # top
+                cell_size - half_thickness,  # right
+                cell_size - half_thickness  # bottom
+            ]
 
-                self._cell_cache[f'{border_type}_{thickness}'] = cell_img.copy()
+            cell_draw.rectangle(
+                borders,
+                outline=(*current_border_color, 255),
+                width=thickness
+            )
 
-        # Cache per lettere
+            self._cell_cache[f'{border_type}_{thickness}'] = np.array(cell_img)  # Converti subito in numpy array
+
+        # Ottimizza la cache delle lettere
         self._letter_cache = {}
-        # Pre-rendering delle lettere comuni
-        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        for letter in letters:
-            test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            max_bbox = self.grid_font.getbbox(test_letter)
-            max_height = max_bbox[3] - max_bbox[1]
+        # Pre-calcola valori comuni per tutte le lettere
+        test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        max_bbox = self.grid_font.getbbox(test_letter)
+        max_height = max_bbox[3] - max_bbox[1]
+        margin_y = cell_size - max_height
+        y_offset = -2
+        text_y = margin_y // 2
 
+        for letter in test_letter:
             bbox = self.grid_font.getbbox(letter)
             text_width = bbox[2] - bbox[0]
-
             margin_x = cell_size - text_width
-            margin_y = cell_size - max_height
-
             text_x = margin_x // 2
-            text_y = margin_y // 2
-            y_offset = -2
 
-            # Crea un'immagine per la lettera
             letter_img = Image.new('RGBA', (cell_size, cell_size), (0, 0, 0, 0))
             letter_draw = ImageDraw.Draw(letter_img)
 
@@ -705,7 +712,8 @@ class CrosswordVideoGenerator:
                 fill=(*text_color, 255)
             )
 
-            self._letter_cache[letter] = letter_img.copy()
+            # Converti subito in numpy array per evitare conversioni multiple
+            self._letter_cache[letter] = np.array(letter_img)
 
 def main():
     try:
