@@ -1,3 +1,4 @@
+import time
 import cv2
 import json
 import textwrap
@@ -689,29 +690,47 @@ class CrosswordVideoGenerator:
                                                (frame.shape[1], frame.shape[0]))
             self._overlay_image(frame, clue_overlay, position)
 
+
 def main():
     try:
+        start_time = time.time()
+        print("Inizio esecuzione...")
+
         # Initialize configuration
-        config_manager = ConfigManager()
+        config = CrosswordConfig(
+            font_path='PressStart2P-Regular.ttf',
+            clue_font_size=24
+        )
+        config_manager = ConfigManager(config)
 
         # Load and validate data
+        load_start = time.time()
         template_data = config_manager.load_json_file('template.json')
         crossword_data = config_manager.load_json_file('crossword-data.json')
 
         config_manager.validate_template(template_data)
         config_manager.validate_crossword_data(crossword_data)
-
-        # Optional: Update configuration with custom settings
-        config_manager.update_config(
-            font_path='PressStart2P-Regular.ttf',
-            clue_font_size=24
-        )
+        print(f"Caricamento e validazione dati: {time.time() - load_start:.2f} secondi")
 
         # Create generator with configuration
-        generator = CrosswordVideoGenerator(template_data, crossword_data, config_manager)
+        init_start = time.time()
+        generator = CrosswordVideoGenerator(
+            template_data,
+            crossword_data,
+            config_manager
+        )
+        print(f"Inizializzazione generatore: {time.time() - init_start:.2f} secondi")
 
         # Generate video
+        process_start = time.time()
         generator.process_video('input_video.mp4', 'output_video.mp4')
+        print(f"Processamento video: {time.time() - process_start:.2f} secondi")
+
+        # Print total execution time
+        total_time = time.time() - start_time
+        print("\n=== Tempi di esecuzione ===")
+        print(f"Tempo totale: {total_time:.2f} secondi")
+        print(f"Tempo medio per fase: {total_time / 3:.2f} secondi")
 
     except (FileNotFoundError, ValueError) as e:
         print(f"Configuration error: {e}")
