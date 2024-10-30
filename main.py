@@ -164,6 +164,9 @@ class CrosswordVideoGenerator:
         # Attributo per fps, inizializzato a None e settato più tardi in process_video
         self.fps = None
 
+        # Inizializza le cache dopo l'inizializzazione dei font
+        self._initialize_cache()
+
     def _get_cell_size(self) -> int:
         """Get cell size from style settings or default configuration"""
         return self.style.get('cell_size', self.config_manager.config.default_cell_size)
@@ -379,34 +382,13 @@ class CrosswordVideoGenerator:
                              is_initial: bool = False, frame_number: int = None,
                              timing: TimingInfo = None) -> np.ndarray:
         """
-        Crea l'overlay della griglia del cruciverba con lettere che appaiono sequenzialmente
-
-        Args:
-            highlight_word_index: Index of the word to highlight
-            show_letters: Whether to show letters in the grid
-            is_initial: Whether this is the initial grid display
-            frame_number: Current frame number
-            timing: Timing information for animations
-
-        Returns:
-            np.ndarray: The generated grid overlay
+        Crea l'overlay della griglia del cruciverba utilizzando il sistema di cache
         """
         cell_size = self._get_cell_size()
         grid_width = (self.bounds[2] - self.bounds[0] + 1) * cell_size
         grid_height = (self.bounds[3] - self.bounds[1] + 1) * cell_size
 
         overlay_img = Image.new('RGBA', (grid_width, grid_height), (0, 0, 0, 0))
-        overlay_draw = ImageDraw.Draw(overlay_img)
-
-        # Get colors from configuration
-        bg_color = self._get_style_color('background_color', 'default_background_color')
-        border_color = self._get_style_color('border_color', 'default_border_color')
-        highlight_color = self._get_style_color('highlight_color', 'default_highlight_color')
-        text_color = self._get_style_color('text_color', 'default_text_color')
-        inactive_color = (128, 128, 128)  # Color for non-highlighted cells
-
-        highlight_thickness = 6
-        normal_thickness = 6
 
         highlighted_cells = set()
         if highlight_word_index is not None:
@@ -419,8 +401,7 @@ class CrosswordVideoGenerator:
 
         min_x, min_y, max_x, max_y = self.bounds
 
-        # Ottieni la sequenza di lettere per la parola corrente
-        current_word_letters = []
+        # Ottieni la sequenza di lettere visibili
         visible_letters = set()
         if highlight_word_index is not None and show_letters and frame_number is not None and timing is not None:
             current_word_letters = self._get_word_letters_sequence(self.words[highlight_word_index])
@@ -434,58 +415,25 @@ class CrosswordVideoGenerator:
             px = rel_x * cell_size
             py = rel_y * cell_size
 
-            cell_img = Image.new('RGBA', (cell_size, cell_size), (*bg_color, 255))
-            cell_draw = ImageDraw.Draw(cell_img)
-
+            # Determina il tipo di cella da usare
             if is_initial:
-                current_border_color = border_color
-                current_thickness = normal_thickness
+                cell_img = self._cell_cache['initial_6'].copy()
             else:
                 is_highlighted = (y, x) in highlighted_cells
-                current_border_color = highlight_color if is_highlighted else inactive_color
-                current_thickness = highlight_thickness if is_highlighted else normal_thickness
+                cell_type = 'highlight_6' if is_highlighted else 'inactive_6'
+                cell_img = self._cell_cache[cell_type].copy()
 
-            half_thickness = current_thickness / 2
-            left = half_thickness
-            top = half_thickness
-            right = cell_size - half_thickness
-            bottom = cell_size - half_thickness
-
-            cell_draw.rectangle(
-                [left, top, right, bottom],
-                outline=(*current_border_color, 255),
-                width=current_thickness
-            )
-
-            # Gestione delle lettere
+            # Aggiungi la lettera se necessario
             should_show_letter = (
-                    (y, x) in revealed_cells or  # Lettere delle parole già rivelate
-                    (y, x) in visible_letters  # Lettere della parola corrente che devono essere visibili
+                    (y, x) in revealed_cells or
+                    (y, x) in visible_letters
             )
 
             if should_show_letter:
                 letter = self.grid[y][x]
-                if letter != '_':
-                    test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    max_bbox = self.grid_font.getbbox(test_letter)
-                    max_height = max_bbox[3] - max_bbox[1]
-
-                    bbox = self.grid_font.getbbox(letter.upper())
-                    text_width = bbox[2] - bbox[0]
-
-                    margin_x = cell_size - text_width
-                    margin_y = cell_size - max_height
-
-                    text_x = margin_x // 2
-                    text_y = margin_y // 2
-                    y_offset = -2
-
-                    cell_draw.text(
-                        (text_x, text_y + y_offset),
-                        letter.upper(),
-                        font=self.grid_font,
-                        fill=text_color
-                    )
+                if letter != '_' and letter in self._letter_cache:
+                    # Sovrapponi la lettera cached alla cella
+                    cell_img.paste(self._letter_cache[letter], (0, 0), self._letter_cache[letter])
 
             overlay_img.paste(cell_img, (px, py))
 
@@ -690,6 +638,74 @@ class CrosswordVideoGenerator:
                                                (frame.shape[1], frame.shape[0]))
             self._overlay_image(frame, clue_overlay, position)
 
+    def _initialize_cache(self):
+        """Inizializza il sistema di cache per celle e lettere"""
+        cell_size = self._get_cell_size()
+        bg_color = self._get_style_color('background_color', 'default_background_color')
+        border_color = self._get_style_color('border_color', 'default_border_color')
+        inactive_color = (128, 128, 128)
+        text_color = self._get_style_color('text_color', 'default_text_color')
+
+        # Cache per celle vuote con diversi bordi
+        self._cell_cache = {}
+
+        # Crea celle base con diversi bordi
+        for thickness in [6]:  # Possiamo aggiungere altri spessori se necessario
+            for border_type in ['initial', 'inactive', 'highlight']:
+                current_border_color = {
+                    'initial': border_color,
+                    'inactive': inactive_color,
+                    'highlight': self._get_style_color('highlight_color', 'default_highlight_color')
+                }[border_type]
+
+                cell_img = Image.new('RGBA', (cell_size, cell_size), (*bg_color, 255))
+                cell_draw = ImageDraw.Draw(cell_img)
+
+                half_thickness = thickness / 2
+                left = half_thickness
+                top = half_thickness
+                right = cell_size - half_thickness
+                bottom = cell_size - half_thickness
+
+                cell_draw.rectangle(
+                    [left, top, right, bottom],
+                    outline=(*current_border_color, 255),
+                    width=thickness
+                )
+
+                self._cell_cache[f'{border_type}_{thickness}'] = cell_img.copy()
+
+        # Cache per lettere
+        self._letter_cache = {}
+        # Pre-rendering delle lettere comuni
+        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        for letter in letters:
+            test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            max_bbox = self.grid_font.getbbox(test_letter)
+            max_height = max_bbox[3] - max_bbox[1]
+
+            bbox = self.grid_font.getbbox(letter)
+            text_width = bbox[2] - bbox[0]
+
+            margin_x = cell_size - text_width
+            margin_y = cell_size - max_height
+
+            text_x = margin_x // 2
+            text_y = margin_y // 2
+            y_offset = -2
+
+            # Crea un'immagine per la lettera
+            letter_img = Image.new('RGBA', (cell_size, cell_size), (0, 0, 0, 0))
+            letter_draw = ImageDraw.Draw(letter_img)
+
+            letter_draw.text(
+                (text_x, text_y + y_offset),
+                letter,
+                font=self.grid_font,
+                fill=(*text_color, 255)
+            )
+
+            self._letter_cache[letter] = letter_img.copy()
 
 def main():
     try:
