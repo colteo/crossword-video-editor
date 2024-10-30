@@ -8,6 +8,104 @@ from enum import Enum, auto
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
 
+from dataclasses import dataclass
+from typing import Optional, Dict, Any
+import json
+from pathlib import Path
+
+@dataclass
+class CrosswordConfig:
+    """Configuration settings for crossword video generation"""
+    font_path: Optional[str] = None
+    default_cell_size: int = 75
+    default_line_spacing: float = 1.5
+    default_clue_distance: int = 100
+
+    # Font settings
+    clue_font_size: int = 20
+    grid_font_size: int = 46
+
+    # Colors (RGB)
+    default_text_color: tuple = (0, 0, 0)
+    default_border_color: tuple = (0, 0, 0)
+    default_background_color: tuple = (255, 255, 255)
+    default_highlight_color: tuple = (0, 255, 0)
+
+class ConfigManager:
+    """Manages configuration loading and validation for crossword video generation"""
+
+    def __init__(self, config: Optional[CrosswordConfig] = None):
+        self.config = config or CrosswordConfig()
+
+    @staticmethod
+    def load_json_file(file_path: str) -> Dict[str, Any]:
+        """Load and validate a JSON file"""
+        try:
+            path = Path(file_path)
+            if not path.exists():
+                raise FileNotFoundError(f"File not found: {file_path}")
+
+            with path.open('r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data
+
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in {file_path}: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Error loading {file_path}: {str(e)}")
+
+    def validate_crossword_data(self, data: Dict[str, Any]) -> bool:
+        """Validate crossword data structure"""
+        required_fields = ['grid', 'words']
+
+        if not all(field in data for field in required_fields):
+            missing = [f for f in required_fields if f not in data]
+            raise ValueError(f"Missing required fields in crossword data: {missing}")
+
+        # Validate grid
+        if not isinstance(data['grid'], list) or not all(isinstance(row, list) for row in data['grid']):
+            raise ValueError("Grid must be a 2D array")
+
+        # Validate words
+        for word in data['words']:
+            required_word_fields = ['text', 'x', 'y', 'is_horizontal', 'clue']
+            if not all(field in word for field in required_word_fields):
+                raise ValueError(f"Word missing required fields: {word}")
+
+        return True
+
+    def validate_template(self, data: Dict[str, Any]) -> bool:
+        """Validate template structure"""
+        required_fields = ['template_id', 'animation_sequence', 'style_settings']
+
+        if not all(field in data for field in required_fields):
+            missing = [f for f in required_fields if f not in data]
+            raise ValueError(f"Missing required fields in template: {missing}")
+
+        # Validate animation sequence
+        if not isinstance(data['animation_sequence'], list):
+            raise ValueError("Animation sequence must be a list")
+
+        return True
+
+    def update_config(self, **kwargs):
+        """Update configuration settings"""
+        for key, value in kwargs.items():
+            if hasattr(self.config, key):
+                setattr(self.config, key, value)
+            else:
+                raise ValueError(f"Unknown configuration parameter: {key}")
+
+    def get_font_path(self) -> Optional[str]:
+        """Get font path with validation"""
+        if self.config.font_path:
+            path = Path(self.config.font_path)
+            if not path.exists():
+                print(f"Warning: Font file not found at {self.config.font_path}")
+                return None
+            return str(path)
+        return None
+
 class AnimationType(Enum):
     INITIAL_GRID = "initial_grid"
     SHOW_GRID_EMPTY = "show_grid_empty"
@@ -28,13 +126,19 @@ class TimingInfo:
 
 
 class CrosswordVideoGenerator:
-    def __init__(self, template_data: Dict, crossword_data: Dict):
+    def __init__(self, template_data: Dict, crossword_data: Dict, config_manager: Optional[ConfigManager] = None):
         """
         Inizializza il generatore del video con la corretta sequenza di inizializzazione
+
+        Args:
+            template_data: Dictionary containing template configuration
+            crossword_data: Dictionary containing crossword data
+            config_manager: Optional ConfigManager instance for custom configuration
         """
         # Salva i dati di input
         self.template = template_data
         self.crossword = crossword_data
+        self.config_manager = config_manager or ConfigManager()
 
         # Estrai i dati principali
         self.grid = np.array(crossword_data['grid'])
@@ -46,38 +150,55 @@ class CrosswordVideoGenerator:
         self.valid_cells = self._get_valid_cells()
         self.bounds = self._calculate_bounds()
         min_x, min_y, max_x, max_y = self.bounds
-        self.grid_width = (max_x - min_x + 1) * self.style['cell_size']
-        self.grid_height = (max_y - min_y + 1) * self.style['cell_size']
+        self.grid_width = (max_x - min_x + 1) * self._get_cell_size()
+        self.grid_height = (max_y - min_y + 1) * self._get_cell_size()
 
         # Inizializza i parametri di testo
         self.max_text_width = self.style.get('max_text_width', 500)
-        self.line_spacing = self.style.get('line_spacing', 1.5)
-
-        # Ottieni le dimensioni dei font dalle impostazioni
-        clue_font_size = self.style['clue_font']['size']
-        grid_font_size = self.style['grid_font']['size']
+        self.line_spacing = self.style.get('line_spacing', self.config_manager.config.default_line_spacing)
 
         # Inizializza i font
-        try:
-            # Prova a caricare i font personalizzati
-            self.clue_font = ImageFont.truetype("PressStart2P-Regular.ttf", clue_font_size)
-            self.grid_font = ImageFont.truetype("PressStart2P-Regular.ttf", grid_font_size)
-            print(f"Font caricati - Clue size: {clue_font_size}, Grid size: {grid_font_size}")
-        except IOError as e:
-            print(f"Errore nel caricamento dei font ({str(e)}), uso il font di default")
-            # Se il caricamento fallisce, usa i font di default
-            default_font = ImageFont.load_default()
-            self.clue_font = default_font
-            self.grid_font = default_font
-        except Exception as e:
-            print(f"Errore inaspettato nell'inizializzazione dei font: {str(e)}")
-            # In caso di altri errori, usa comunque i font di default
-            default_font = ImageFont.load_default()
-            self.clue_font = default_font
-            self.grid_font = default_font
+        self._initialize_fonts()
 
         # Attributo per fps, inizializzato a None e settato più tardi in process_video
         self.fps = None
+
+    def _get_cell_size(self) -> int:
+        """Get cell size from style settings or default configuration"""
+        return self.style.get('cell_size', self.config_manager.config.default_cell_size)
+
+    def _initialize_fonts(self):
+        """Initialize fonts using configuration settings"""
+        try:
+            # Get font configuration
+            font_path = self.config_manager.get_font_path()
+            clue_font_size = self.style.get('clue_font', {}).get('size',
+                                                                 self.config_manager.config.clue_font_size)
+            grid_font_size = self.style.get('grid_font', {}).get('size',
+                                                                 self.config_manager.config.grid_font_size)
+
+            if font_path:
+                self.clue_font = ImageFont.truetype(font_path, clue_font_size)
+                self.grid_font = ImageFont.truetype(font_path, grid_font_size)
+                print(f"Custom font loaded - Clue size: {clue_font_size}, Grid size: {grid_font_size}")
+            else:
+                print("Using default font")
+                default_font = ImageFont.load_default()
+                self.clue_font = default_font
+                self.grid_font = default_font
+
+        except Exception as e:
+            print(f"Font initialization error: {str(e)}")
+            default_font = ImageFont.load_default()
+            self.clue_font = default_font
+            self.grid_font = default_font
+
+    def _get_style_color(self, key: str, default_key: str) -> tuple:
+        """Get color from style settings or default configuration"""
+        color = self.style.get(key)
+        if color is None:
+            return getattr(self.config_manager.config, default_key)
+        return tuple(color)
 
     def _get_font_height(self, font: ImageFont.FreeTypeFont) -> int:
         """
@@ -258,19 +379,30 @@ class CrosswordVideoGenerator:
                              timing: TimingInfo = None) -> np.ndarray:
         """
         Crea l'overlay della griglia del cruciverba con lettere che appaiono sequenzialmente
+
+        Args:
+            highlight_word_index: Index of the word to highlight
+            show_letters: Whether to show letters in the grid
+            is_initial: Whether this is the initial grid display
+            frame_number: Current frame number
+            timing: Timing information for animations
+
+        Returns:
+            np.ndarray: The generated grid overlay
         """
-        cell_size = self.style['cell_size']
+        cell_size = self._get_cell_size()
         grid_width = (self.bounds[2] - self.bounds[0] + 1) * cell_size
         grid_height = (self.bounds[3] - self.bounds[1] + 1) * cell_size
 
         overlay_img = Image.new('RGBA', (grid_width, grid_height), (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay_img)
 
-        bg_color = tuple(self.style['background_color'])
-        black_color = tuple(self.style['border_color'])
-        grey_color = (128, 128, 128)
-        highlight_color = tuple(self.style['highlight_color'])
-        text_color = tuple(self.style['text_color'])
+        # Get colors from configuration
+        bg_color = self._get_style_color('background_color', 'default_background_color')
+        border_color = self._get_style_color('border_color', 'default_border_color')
+        highlight_color = self._get_style_color('highlight_color', 'default_highlight_color')
+        text_color = self._get_style_color('text_color', 'default_text_color')
+        inactive_color = (128, 128, 128)  # Color for non-highlighted cells
 
         highlight_thickness = 6
         normal_thickness = 6
@@ -288,7 +420,7 @@ class CrosswordVideoGenerator:
 
         # Ottieni la sequenza di lettere per la parola corrente
         current_word_letters = []
-        visible_letters = set()  # Set di coordinate delle lettere da mostrare
+        visible_letters = set()
         if highlight_word_index is not None and show_letters and frame_number is not None and timing is not None:
             current_word_letters = self._get_word_letters_sequence(self.words[highlight_word_index])
             for i, (ly, lx, _) in enumerate(current_word_letters):
@@ -305,11 +437,11 @@ class CrosswordVideoGenerator:
             cell_draw = ImageDraw.Draw(cell_img)
 
             if is_initial:
-                current_border_color = black_color
+                current_border_color = border_color
                 current_thickness = normal_thickness
             else:
                 is_highlighted = (y, x) in highlighted_cells
-                current_border_color = highlight_color if is_highlighted else grey_color
+                current_border_color = highlight_color if is_highlighted else inactive_color
                 current_thickness = highlight_thickness if is_highlighted else normal_thickness
 
             half_thickness = current_thickness / 2
@@ -558,30 +690,33 @@ class CrosswordVideoGenerator:
             self._overlay_image(frame, clue_overlay, position)
 
 def main():
-    """Funzione principale"""
     try:
-        # Carica il template
-        with open('template.json', 'r') as f:
-            template_data = json.load(f)
+        # Initialize configuration
+        config_manager = ConfigManager()
 
-        # Carica i dati del cruciverba
-        with open('crossword-data-02.json', 'r') as f:
-            crossword_data = json.load(f)
+        # Load and validate data
+        template_data = config_manager.load_json_file('template.json')
+        crossword_data = config_manager.load_json_file('crossword-data.json')
 
-        # Crea il generatore
-        generator = CrosswordVideoGenerator(template_data, crossword_data)
+        config_manager.validate_template(template_data)
+        config_manager.validate_crossword_data(crossword_data)
 
-        # Genera il video
+        # Optional: Update configuration with custom settings
+        config_manager.update_config(
+            font_path='PressStart2P-Regular.ttf',
+            clue_font_size=24
+        )
+
+        # Create generator with configuration
+        generator = CrosswordVideoGenerator(template_data, crossword_data, config_manager)
+
+        # Generate video
         generator.process_video('input_video.mp4', 'output_video.mp4')
 
-    except FileNotFoundError as e:
-        print(f"Errore: File non trovato - {e}")
-    except json.JSONDecodeError as e:
-        print(f"Errore: JSON non valido - {e}")
-    except ValueError as e:
-        print(f"Errore: {e}")
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Configuration error: {e}")
     except Exception as e:
-        print(f"Errore inaspettato: {e}")
+        print(f"Unexpected error: {e}")
 
 
 if __name__ == "__main__":
