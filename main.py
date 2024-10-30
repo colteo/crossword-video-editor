@@ -424,10 +424,15 @@ class CrosswordVideoGenerator:
     def _create_grid_overlay(self, highlight_word_index: int = None, show_letters: bool = False,
                              is_initial: bool = False) -> np.ndarray:
         """
-        Crea l'overlay della griglia del cruciverba con migliore centraggio delle lettere
+        Crea l'overlay della griglia del cruciverba con bordi corretti per evitare sovrapposizioni.
         """
-        overlay = np.zeros((self.grid_height, self.grid_width, 4), dtype=np.uint8)
         cell_size = self.style['cell_size']
+        grid_width = (self.bounds[2] - self.bounds[0] + 1) * cell_size
+        grid_height = (self.bounds[3] - self.bounds[1] + 1) * cell_size
+
+        # Crea l'immagine PIL dell'overlay
+        overlay_img = Image.new('RGBA', (grid_width, grid_height), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay_img)
 
         # Converti i colori da lista a tuple
         bg_color = tuple(self.style['background_color'])
@@ -437,8 +442,8 @@ class CrosswordVideoGenerator:
         text_color = tuple(self.style['text_color'])
 
         # Definisci gli spessori dei bordi
-        highlight_thickness = 10
-        normal_thickness = 10
+        highlight_thickness = 6  # Regola lo spessore secondo le tue preferenze
+        normal_thickness = 6  # Regola lo spessore secondo le tue preferenze
 
         # Se c'è una parola da evidenziare, ottieni le sue celle
         highlighted_cells = set()
@@ -451,7 +456,10 @@ class CrosswordVideoGenerator:
             for i in range(highlight_word_index):
                 revealed_cells.update(self._get_word_cells(self.words[i]))
 
-        min_x, min_y, _, _ = self.bounds
+        min_x, min_y, max_x, max_y = self.bounds
+
+        # Prepara un set per un accesso rapido alle coordinate delle celle valide
+        valid_cells_set = set(self.valid_cells)
 
         for y, x in self.valid_cells:
             rel_y = y - min_y
@@ -472,10 +480,20 @@ class CrosswordVideoGenerator:
                 current_border_color = highlight_color if is_highlighted else grey_color
                 current_thickness = highlight_thickness if is_highlighted else normal_thickness
 
-            # Disegna il bordo della cella
-            cell_draw.rectangle([(0, 0), (cell_size - 1, cell_size - 1)],
-                                outline=(*current_border_color, 255),
-                                width=current_thickness)
+            half_thickness = current_thickness / 2
+
+            # Definisci le coordinate del rettangolo interno
+            left = half_thickness
+            top = half_thickness
+            right = cell_size - half_thickness
+            bottom = cell_size - half_thickness
+
+            # Disegna il rettangolo della cella con il contorno
+            cell_draw.rectangle(
+                [left, top, right, bottom],
+                outline=(*current_border_color, 255),
+                width=current_thickness
+            )
 
             # Aggiungi la lettera se necessario
             should_show_letter = (
@@ -514,11 +532,11 @@ class CrosswordVideoGenerator:
                                    font=self.grid_font,
                                    fill=(*text_color, 255))
 
-            # Converti la cella PIL in array numpy
-            cell_array = np.array(cell_img)
+            # Incolla la cella nell'overlay principale
+            overlay_img.paste(cell_img, (px, py))
 
-            # Copia la cella nell'overlay principale
-            overlay[py:py + cell_size, px:px + cell_size] = cell_array
+        # Converti l'immagine PIL dell'overlay in array numpy
+        overlay = np.array(overlay_img)
 
         return overlay
 
