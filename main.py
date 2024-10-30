@@ -10,21 +10,15 @@ from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
 
 class AnimationType(Enum):
     INITIAL_GRID = "initial_grid"
-    SHOW_CLUE_01 = "show_clue_01"
-    SHOW_GRID_WORD_01_EMPTY = "show_grid_word_01_empty"
-    SHOW_GRID_WORD_01 = "show_grid_word_01"
-    SHOW_CLUE_02 = "show_clue_02"
-    SHOW_GRID_WORD_02_EMPTY = "show_grid_word_02_empty"
-    SHOW_GRID_WORD_02 = "show_grid_word_02"
-    SHOW_CLUE_03 = "show_clue_03"
-    SHOW_GRID_WORD_03_EMPTY = "show_grid_word_03_empty"
-    SHOW_GRID_WORD_03 = "show_grid_word_03"
-    SHOW_CLUE_04 = "show_clue_04"
-    SHOW_GRID_WORD_04_EMPTY = "show_grid_word_04_empty"
-    SHOW_GRID_WORD_04 = "show_grid_word_04"
-    SHOW_CLUE_05 = "show_clue_05"
-    SHOW_GRID_WORD_05_EMPTY = "show_grid_word_05_empty"
-    SHOW_GRID_WORD_05 = "show_grid_word_05"
+    SHOW_GRID_EMPTY = "show_grid_empty"
+    SHOW_GRID_WORD = "show_grid_word"
+    SHOW_CLUE = "show_clue"
+
+class WordAnimation:
+    """Classe per gestire le animazioni relative a una parola specifica"""
+    def __init__(self, word_index: int, animations: List[Dict]):
+        self.word_index = word_index
+        self.animations = animations
 
 @dataclass
 class TimingInfo:
@@ -36,38 +30,54 @@ class TimingInfo:
 class CrosswordVideoGenerator:
     def __init__(self, template_data: Dict, crossword_data: Dict):
         """
-        Inizializza il generatore del video
+        Inizializza il generatore del video con la corretta sequenza di inizializzazione
         """
+        # Salva i dati di input
         self.template = template_data
         self.crossword = crossword_data
+
+        # Estrai i dati principali
         self.grid = np.array(crossword_data['grid'])
         self.words = crossword_data['words']
         self.style = template_data['style_settings']['crossword']
         self.layout = template_data['layout']
+
+        # Inizializza le dimensioni e i parametri della griglia
         self.valid_cells = self._get_valid_cells()
         self.bounds = self._calculate_bounds()
         min_x, min_y, max_x, max_y = self.bounds
         self.grid_width = (max_x - min_x + 1) * self.style['cell_size']
         self.grid_height = (max_y - min_y + 1) * self.style['cell_size']
+
+        # Inizializza i parametri di testo
         self.max_text_width = self.style.get('max_text_width', 500)
         self.line_spacing = self.style.get('line_spacing', 1.5)
 
-        # Leggi le dimensioni dei font dalle impostazioni
-        font_settings = self.style.get('clue_font', {})
-        grid_font_settings = self.style.get('grid_font', {})
+        # Ottieni le dimensioni dei font dalle impostazioni
+        clue_font_size = self.style['clue_font']['size']
+        grid_font_size = self.style['grid_font']['size']
 
-        clue_font_size = font_settings.get('size', 32)
-        grid_font_size = grid_font_settings.get('size', 48)  # Dimensione default più grande per la griglia
-
+        # Inizializza i font
         try:
-            # Carica due versioni del font con dimensioni diverse
+            # Prova a caricare i font personalizzati
             self.clue_font = ImageFont.truetype("PressStart2P-Regular.ttf", clue_font_size)
             self.grid_font = ImageFont.truetype("PressStart2P-Regular.ttf", grid_font_size)
             print(f"Font caricati - Clue size: {clue_font_size}, Grid size: {grid_font_size}")
-        except IOError:
-            print("Font Press Start 2P non trovato. Assicurati di averlo installato nel sistema.")
-            self.clue_font = ImageFont.load_default()
-            self.grid_font = ImageFont.load_default()
+        except IOError as e:
+            print(f"Errore nel caricamento dei font ({str(e)}), uso il font di default")
+            # Se il caricamento fallisce, usa i font di default
+            default_font = ImageFont.load_default()
+            self.clue_font = default_font
+            self.grid_font = default_font
+        except Exception as e:
+            print(f"Errore inaspettato nell'inizializzazione dei font: {str(e)}")
+            # In caso di altri errori, usa comunque i font di default
+            default_font = ImageFont.load_default()
+            self.clue_font = default_font
+            self.grid_font = default_font
+
+        # Attributo per fps, inizializzato a None e settato più tardi in process_video
+        self.fps = None
 
     def _get_font_height(self, font: ImageFont.FreeTypeFont) -> int:
         """
@@ -511,22 +521,20 @@ class CrosswordVideoGenerator:
                                                alpha_background * background[y:y + h, x:x + w, c])
 
     def process_video(self, input_video_path: str, output_video_path: str):
-        """Processa il video applicando le animazioni e mantiene l'audio originale"""
-        # Apri il video per l'elaborazione frame per frame
+        """Processa il video applicando le animazioni"""
         cap = cv2.VideoCapture(input_video_path)
         if not cap.isOpened():
             raise ValueError("Impossibile aprire il video di input")
 
-        # Ottieni le proprietà del video
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        self.width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.fps = int(cap.get(cv2.CAP_PROP_FPS))
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        # Crea un file video temporaneo per l'output senza audio
         temp_output = "temp_output.mp4"
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(temp_output, fourcc, fps, (width, height))
+        out = cv2.VideoWriter(temp_output, fourcc, self.fps,
+                              (self.width, self.height))
 
         frame_number = 0
         print(f"Inizio elaborazione video...")
@@ -538,48 +546,34 @@ class CrosswordVideoGenerator:
 
             result = frame.copy()
 
-            # Applica tutte le animazioni attive per questo frame
-            for pattern in self.template['animation_patterns']:
-                timing = self._get_timing_info(pattern, fps)
-                if self._is_frame_in_timing(frame_number, timing):
-                    self._apply_animation(result, pattern, timing, frame_number)
+            # Processa ogni sequenza di animazione nel template
+            for sequence in self.template['animation_sequence']:
+                self._process_animation_sequence(result, sequence, frame_number)
 
             out.write(result)
             frame_number += 1
 
-            if frame_number % fps == 0:  # Mostra il progresso ogni secondo
-                print(f"Elaborati {frame_number / fps:.1f} secondi...")
+            if frame_number % self.fps == 0:
+                print(f"Elaborati {frame_number / self.fps:.1f} secondi...")
 
         cap.release()
         out.release()
 
-        # Ora combina il video processato con l'audio originale
+        # Gestione dell'audio e finalizzazione come prima
         print("Combinazione del video con l'audio originale...")
         try:
-            # Carica il video originale per estrarre l'audio
             original_video = VideoFileClip(input_video_path)
-            # Carica il video processato
             processed_video = VideoFileClip(temp_output)
-
-            # Combina il video processato con l'audio originale
             final_video = processed_video.set_audio(original_video.audio)
-
-            # Esporta il video finale
             final_video.write_videofile(output_video_path,
                                         codec='libx264',
                                         audio_codec='aac')
-
-            # Chiudi i file
             original_video.close()
             processed_video.close()
-
-            # Rimuovi il file temporaneo
             import os
             os.remove(temp_output)
-
         except Exception as e:
             print(f"Errore durante la combinazione dell'audio: {e}")
-            # In caso di errore, mantieni almeno il video senza audio
             import shutil
             shutil.move(temp_output, output_video_path)
 
@@ -658,6 +652,76 @@ class CrosswordVideoGenerator:
             font=self.grid_font,
             fill=text_color_with_opacity
         )
+
+    def _apply_initial_grid(self, frame: np.ndarray):
+        """
+        Applica l'animazione della griglia iniziale
+        """
+        grid_overlay = self._create_grid_overlay(is_initial=True)
+        positions = self._calculate_positions(frame.shape[1], frame.shape[0])
+        self._overlay_image(frame, grid_overlay, positions['grid'])
+
+    def _process_animation_sequence(self, frame: np.ndarray,
+                                    sequence: Dict,
+                                    frame_number: int):
+        """
+        Processa una sequenza di animazioni per un frame specifico
+        """
+        if sequence['type'] == 'initial_grid':
+            timing = TimingInfo(
+                self._seconds_to_frames(sequence['start'], self.fps),
+                self._seconds_to_frames(sequence['end'], self.fps)
+            )
+            if self._is_frame_in_timing(frame_number, timing):
+                self._apply_initial_grid(frame)
+
+        elif sequence['type'] == 'word_reveal':
+            for word_data in sequence['sequence']:
+                word_index = word_data['word_index']
+                for anim in word_data['animations']:
+                    timing = TimingInfo(
+                        self._seconds_to_frames(anim['start'], self.fps),
+                        self._seconds_to_frames(anim['end'], self.fps)
+                    )
+                    if self._is_frame_in_timing(frame_number, timing):
+                        self._apply_word_animation(frame, word_index, anim, timing, frame_number)
+
+    def _apply_word_animation(self, frame: np.ndarray,
+                              word_index: int,
+                              animation: Dict,
+                              timing: TimingInfo,
+                              frame_number: int):
+        """
+        Applica una singola animazione di una parola
+        """
+        anim_type = animation['type']
+
+        if anim_type == 'show_grid_empty':
+            grid_overlay = self._create_grid_overlay(
+                highlight_word_index=word_index,
+                show_letters=False,
+                is_initial=False
+            )
+            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
+            self._overlay_image(frame, grid_overlay, positions['grid'])
+
+        elif anim_type == 'show_grid_word':
+            grid_overlay = self._create_grid_overlay(
+                highlight_word_index=word_index,
+                show_letters=True,
+                is_initial=False,
+                frame_number=frame_number,
+                timing=timing
+            )
+            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
+            self._overlay_image(frame, grid_overlay, positions['grid'])
+
+        elif anim_type == 'show_clue':
+            clue_text = self.words[word_index]['clue']
+            clue_overlay, clue_size = self._create_clue_overlay(clue_text, animation)
+            position = self._get_clue_position(animation, clue_size,
+                                               (frame.shape[1], frame.shape[0]))
+            self._overlay_image(frame, clue_overlay, position)
 
 def main():
     """Funzione principale"""

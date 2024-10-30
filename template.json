@@ -1,47 +1,63 @@
 {
   "template_id": "type-a",
-  "animation_patterns": [
+  "animation_sequence": [
     {
       "type": "initial_grid",
       "start": 0.5,
       "end": 3.6
     },
     {
-      "type": "show_grid_word_01_empty",
-      "start": 3.6,
-      "end": 10.8
-    },
-    {
-      "type": "show_clue_01",
-      "start": 3.6,
-      "end": 9.1,
-      "pos_x": 433,
-      "pos_y": 1401,
-      "max_text_width": 495,
-      "text_color": [0, 0, 0]
-    },
-    {
-      "type": "show_grid_word_01",
-      "start": 10.8,
-      "end": 14.8
-    },
-    {
-      "type": "show_grid_word_02_empty",
-      "start": 14.8,
-      "end": 22.0
-    },{
-      "type": "show_clue_02",
-      "start": 14.8,
-      "end": 20.3,
-      "pos_x": 433,
-      "pos_y": 1401,
-      "max_text_width": 495,
-      "text_color": [0, 0, 0]
-    },
-    {
-      "type": "show_grid_word_02",
-      "start": 22.0,
-      "end": 26.0
+      "type": "word_reveal",
+      "sequence": [
+        {
+          "word_index": 0,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 3.6,
+              "end": 10.8
+            },
+            {
+              "type": "show_clue",
+              "start": 3.6,
+              "end": 9.1,
+              "pos_x": 433,
+              "pos_y": 1401,
+              "max_text_width": 495,
+              "text_color": [0, 0, 0]
+            },
+            {
+              "type": "show_grid_word",
+              "start": 10.8,
+              "end": 14.8
+            }
+          ]
+        },
+        {
+          "word_index": 1,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 14.8,
+              "end": 22.0
+            },
+            {
+              "type": "show_clue",
+              "start": 14.8,
+              "end": 20.3,
+              "pos_x": 433,
+              "pos_y": 1401,
+              "max_text_width": 495,
+              "text_color": [0, 0, 0]
+            },
+            {
+              "type": "show_grid_word",
+              "start": 22.0,
+              "end": 26.0
+            }
+          ]
+        }
+      ]
     }
   ],
   "style_settings": {
