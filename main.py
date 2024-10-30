@@ -86,37 +86,6 @@ class CrosswordVideoGenerator:
         bbox = font.getbbox("Aj")  # Usa lettere alte e basse per ottenere l'altezza completa
         return bbox[3] - bbox[1]
 
-    def _wrap_text(self, text: str, font: ImageFont.FreeTypeFont, max_width: int) -> List[str]:
-        """
-        Divide il testo in righe basandosi sulla larghezza massima usando PIL
-        """
-        words = text.split()
-        lines = []
-        current_line = []
-        current_width = 0
-
-        # Crea un'immagine temporanea per misurare il testo
-        temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(temp_img)
-
-        for word in words:
-            word_width = draw.textlength(word, font=font)
-            space_width = draw.textlength(" ", font=font)
-
-            if current_width + word_width <= max_width:
-                current_line.append(word)
-                current_width += word_width + space_width
-            else:
-                if current_line:
-                    lines.append(" ".join(current_line))
-                current_line = [word]
-                current_width = word_width + space_width
-
-        if current_line:
-            lines.append(" ".join(current_line))
-
-        return lines
-
     def _create_clue_overlay(self, clue_text: str, pattern: Dict) -> Tuple[np.ndarray, Tuple[int, int]]:
         """
         Crea l'overlay per l'indizio usando PIL per il rendering del font
@@ -225,95 +194,6 @@ class CrosswordVideoGenerator:
 
         return (x, y)
 
-    def _get_word_index_from_animation_type(self, anim_type: AnimationType) -> int:
-        """
-        Estrae l'indice della parola dal tipo di animazione
-
-        Args:
-            anim_type: Tipo di animazione (enum AnimationType)
-
-        Returns:
-            Indice della parola (0-based)
-        """
-        name = anim_type.name
-
-        # Cerca il numero alla fine del nome usando una regex
-        import re
-        if "_EMPTY" in name:
-            # Per le animazioni tipo SHOW_GRID_WORD_01_EMPTY
-            match = re.search(r'_(\d+)_EMPTY$', name)
-        else:
-            # Per le animazioni tipo SHOW_GRID_WORD_01 o SHOW_CLUE_01
-            match = re.search(r'_(\d+)$', name)
-
-        if match:
-            number = int(match.group(1))
-            return number - 1  # Convertiamo in 0-based index
-
-        raise ValueError(f"Non è possibile estrarre l'indice da {name}")
-
-    def _apply_animation(self, frame: np.ndarray, pattern: Dict, timing: TimingInfo, frame_number: int):
-        """Applica una specifica animazione al frame"""
-        anim_type = AnimationType(pattern['type'])
-
-        # Gestione di tutte le animazioni show_grid_word
-        if anim_type in [
-            AnimationType.SHOW_GRID_WORD_01,
-            AnimationType.SHOW_GRID_WORD_02,
-            AnimationType.SHOW_GRID_WORD_03,
-            AnimationType.SHOW_GRID_WORD_04,
-            AnimationType.SHOW_GRID_WORD_05
-        ]:
-            word_index = self._get_word_index_from_animation_type(anim_type)
-
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=word_index,
-                show_letters=True,
-                is_initial=False,
-                frame_number=frame_number,
-                timing=timing
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        # Gestione delle animazioni empty
-        elif anim_type in [
-            AnimationType.SHOW_GRID_WORD_01_EMPTY,
-            AnimationType.SHOW_GRID_WORD_02_EMPTY,
-            AnimationType.SHOW_GRID_WORD_03_EMPTY,
-            AnimationType.SHOW_GRID_WORD_04_EMPTY,
-            AnimationType.SHOW_GRID_WORD_05_EMPTY
-        ]:
-            word_index = self._get_word_index_from_animation_type(anim_type)
-
-            grid_overlay = self._create_grid_overlay(
-                highlight_word_index=word_index,
-                show_letters=False,
-                is_initial=False
-            )
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
-        # Gestione delle animazioni clue
-        elif anim_type in [
-            AnimationType.SHOW_CLUE_01,
-            AnimationType.SHOW_CLUE_02,
-            AnimationType.SHOW_CLUE_03,
-            AnimationType.SHOW_CLUE_04,
-            AnimationType.SHOW_CLUE_05
-        ]:
-            word_index = self._get_word_index_from_animation_type(anim_type)
-            clue_text = self.words[word_index]['clue']
-            clue_overlay, clue_size = self._create_clue_overlay(clue_text, pattern)
-            position = self._get_clue_position(pattern, clue_size, (frame.shape[1], frame.shape[0]))
-            self._overlay_image(frame, clue_overlay, position)
-
-        # Gestione della griglia iniziale
-        elif anim_type == AnimationType.INITIAL_GRID:
-            grid_overlay = self._create_grid_overlay(is_initial=True)
-            positions = self._calculate_positions(frame.shape[1], frame.shape[0])
-            self._overlay_image(frame, grid_overlay, positions['grid'])
-
     def _get_word_cells(self, word: Dict) -> Set[Tuple[int, int]]:
         """
         Ottiene le coordinate delle celle per una specifica parola
@@ -341,22 +221,6 @@ class CrosswordVideoGenerator:
     def _seconds_to_frames(self, seconds: float, fps: int) -> int:
         """Converte secondi in frames"""
         return int(seconds * fps)
-
-    def _get_timing_info(self, pattern: Dict, fps: int) -> TimingInfo:
-        """
-        Converte il timing da secondi a frames
-
-        Args:
-            pattern: Pattern di animazione dal template
-            fps: Frames per secondo del video
-
-        Returns:
-            TimingInfo con start_frame e end_frame
-        """
-        start_frame = self._seconds_to_frames(pattern['start'], fps)
-        end_frame = self._seconds_to_frames(pattern['end'], fps)
-
-        return TimingInfo(start_frame, end_frame)
 
     def _is_frame_in_timing(self, frame_number: int, timing: TimingInfo) -> bool:
         """Verifica se il frame corrente è all'interno del timing specificato"""
@@ -622,36 +486,6 @@ class CrosswordVideoGenerator:
         letter_appears_at = timing.start_frame + (letter_index * frames_per_letter)
 
         return frame_number >= letter_appears_at
-
-    def _draw_letter(self, draw: ImageDraw.Draw, letter: str, cell_size: int,
-                     text_color: Tuple[int, int, int], opacity: int):
-        """
-        Disegna una lettera nella cella con la data opacità mantenendo il colore corretto
-        """
-        test_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        max_bbox = self.grid_font.getbbox(test_letter)
-        max_height = max_bbox[3] - max_bbox[1]
-
-        bbox = self.grid_font.getbbox(letter.upper())
-        text_width = bbox[2] - bbox[0]
-
-        margin_x = cell_size - text_width
-        margin_y = cell_size - max_height
-
-        text_x = margin_x // 2
-        text_y = margin_y // 2
-        y_offset = -2
-
-        # Usiamo il colore del testo con l'opacità desiderata
-        # Manteniamo il colore originale e modifichiamo solo il canale alpha
-        text_color_with_opacity = (text_color[0], text_color[1], text_color[2], opacity)
-
-        draw.text(
-            (text_x, text_y + y_offset),
-            letter.upper(),
-            font=self.grid_font,
-            fill=text_color_with_opacity
-        )
 
     def _apply_initial_grid(self, frame: np.ndarray):
         """
