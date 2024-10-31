@@ -319,36 +319,127 @@ class TimingInfo:
     end_frame: int
 
 
+@dataclass
+class FontConfig:
+    """Configurazione per un font"""
+    file_path: str
+    clue_size: int
+    clue_color: Tuple[int, int, int]
+    grid_size: int
+    grid_color: Tuple[int, int, int]
+    vertical_adjustment: int
+    horizontal_adjustment: int
+
+    @classmethod
+    def from_template(cls, font_settings: Dict[str, Any], file_path: str) -> 'FontConfig':
+        """Crea una configurazione font dal template"""
+        settings = font_settings['settings']
+        return cls(
+            file_path=file_path,
+            clue_size=settings['clue']['size'],
+            clue_color=tuple(settings['clue']['color']),
+            grid_size=settings['grid']['size'],
+            grid_color=tuple(settings['grid']['color']),
+            vertical_adjustment=settings['grid'].get('vertical_adjustment', 0),
+            horizontal_adjustment=settings['grid'].get('horizontal_adjustment', 0)
+        )
+
+
+class FontManager:
+    """Gestisce il caricamento e la configurazione dei font"""
+
+    def __init__(self, file_manager: FileManager):
+        self.file_manager = file_manager
+        self.current_font: Optional[FontConfig] = None
+
+    def load_font_config(self, template_data: Dict[str, Any]) -> FontConfig:
+        """Carica la configurazione del font dal template"""
+        if 'fonts' not in template_data:
+            raise ValueError("Font configuration not found in template")
+
+        fonts_config = template_data['fonts']
+        main_font = fonts_config.get('main')
+
+        if not main_font or 'file' not in main_font:
+            # Se non è specificato un font principale, usa il fallback
+            fallback = fonts_config.get('fallback', 'Arial')
+            return self._create_default_config(fallback)
+
+        # Controlla che il file del font esista
+        font_path = self.file_manager.get_font_path(main_font['file'])
+        if not font_path.exists():
+            print(f"Warning: Font file {font_path} not found, using fallback font")
+            return self._create_default_config(fonts_config.get('fallback', 'Arial'))
+
+        # Crea la configurazione dal template
+        return FontConfig.from_template(main_font, str(font_path))
+
+    def _create_default_config(self, font_name: str) -> FontConfig:
+        """Crea una configurazione di default per il font specificato"""
+        return FontConfig(
+            file_path=font_name,  # Per font di sistema, usa solo il nome
+            clue_size=24,
+            clue_color=(0, 0, 0),
+            grid_size=46,
+            grid_color=(0, 0, 0),
+            vertical_adjustment=0,
+            horizontal_adjustment=0
+        )
+
+
 class CrosswordVideoGenerator:
     @profile
     def __init__(self, template_data: Dict, crossword_data: Dict,
                  config_manager: Optional[ConfigManager] = None,
                  file_manager: Optional[FileManager] = None):
         """
-        Inizializza il generatore del video con la corretta sequenza di inizializzazione e ottimizzazioni
+        Inizializza il generatore del video con la corretta sequenza di inizializzazione
 
         Args:
-            template_data: Dictionary containing template configuration
-            crossword_data: Dictionary containing crossword data
-            config_manager: Optional ConfigManager instance for custom configuration
+            template_data: Dictionary contenente la configurazione del template
+            crossword_data: Dictionary contenente i dati del cruciverba
+            config_manager: Optional ConfigManager per la configurazione personalizzata
+            file_manager: Optional FileManager per la gestione dei file
         """
-        self.file_manager = file_manager or FileManager()
-
-        # Configurazione del buffer per i frame
-        self._frame_buffer_size = 32  # Dimensione del buffer, modificabile
+        # Inizializza prima gli attributi base
+        self._frame_buffer_size = 32
         self._frame_buffer = []
+        self.fps = None
+        self.width = None
+        self.height = None
+        self._animation_timings = None
+
+        # Inizializza i managers
+        self.file_manager = file_manager or FileManager()
+        self.config_manager = config_manager or ConfigManager()
+        self.font_manager = FontManager(self.file_manager)
+
+        # Inizializza le cache come attributi vuoti
+        self._cell_cache = {}
+        self._letter_cache = {}
+        self._composite_cache = {}
+        self._cell_positions = {}
+        self._cached_colors = {}
 
         # Salva i dati di input
         with profile_section("Init Config"):
             self.template = template_data
             self.crossword = crossword_data
-            self.config_manager = config_manager or ConfigManager()
-
-            # Estrai i dati principali
             self.grid = np.array(crossword_data['grid'])
             self.words = crossword_data['words']
             self.style = template_data['style_settings']['crossword']
             self.layout = template_data['layout']
+
+            # Carica la configurazione del font dal template
+            self.font_config = self.font_manager.load_font_config(template_data)
+
+        # Inizializza i parametri di testo
+        with profile_section("Init Text Params"):
+            self.max_text_width = self.style.get('max_text_width', 500)
+            self.line_spacing = self.style.get('line_spacing',
+                                               self.config_manager.config.default_line_spacing)
+            # Inizializza i font
+            self._initialize_fonts()
 
         # Inizializza le dimensioni e i parametri della griglia
         with profile_section("Init Grid"):
@@ -358,66 +449,50 @@ class CrosswordVideoGenerator:
             self.grid_width = (max_x - min_x + 1) * self._get_cell_size()
             self.grid_height = (max_y - min_y + 1) * self._get_cell_size()
 
-        # Inizializza i parametri di testo
-        with profile_section("Init Text Params"):
-            self.max_text_width = self.style.get('max_text_width', 500)
-            self.line_spacing = self.style.get('line_spacing',
-                                               self.config_manager.config.default_line_spacing)
-
-            # Inizializza i font
-            self._initialize_fonts()
-
-        # Inizializza le cache
+        # Ora possiamo inizializzare le cache
         with profile_section("Init Cache"):
             self._initialize_cache()
 
-            # Pre-calcola e memorizza i colori più usati come array numpy
-            self._cached_colors = {
-                'bg': np.array(self._get_style_color('background_color', 'default_background_color') + (255,),
-                               dtype=np.uint8),
-                'border': np.array(self._get_style_color('border_color', 'default_border_color') + (255,),
-                                   dtype=np.uint8),
-                'text': np.array(self._get_style_color('text_color', 'default_text_color') + (255,), dtype=np.uint8),
-                'highlight': np.array(self._get_style_color('highlight_color', 'default_highlight_color') + (255,),
-                                      dtype=np.uint8)
-            }
+            # Calcola le posizioni delle celle
+            for y, x in self.valid_cells:
+                min_x, min_y, _, _ = self.bounds
+                cell_size = self._get_cell_size()
+                self._cell_positions[(y, x)] = (
+                    (y - min_y) * cell_size,  # py
+                    (x - min_x) * cell_size  # px
+                )
 
-        # Attributo per fps, inizializzato a None e settato più tardi in process_video
-        self.fps = None
+        # Parametri di debug e profiling
+        self.debug_mode = False
+        self.profile_enabled = True
 
-        # Cache per i timing delle animazioni (sarà popolata in process_video)
-        self._animation_timings = None
-
-        # Cache per le celle più frequentemente usate
-        self._cell_positions = {}
-        for y, x in self.valid_cells:
-            min_x, min_y, _, _ = self.bounds
-            cell_size = self._get_cell_size()
-            self._cell_positions[(y, x)] = (
-                (y - min_y) * cell_size,  # py
-                (x - min_x) * cell_size  # px
-            )
+        if self.debug_mode:
+            print("Initialization completed:")
+            print(f"Grid size: {self.grid_width}x{self.grid_height}")
+            print(f"Cell cache entries: {len(self._cell_cache)}")
+            print(f"Composite cache entries: {len(self._composite_cache)}")
 
     def _get_cell_size(self) -> int:
         """Get cell size from style settings or default configuration"""
         return self.style.get('cell_size', self.config_manager.config.default_cell_size)
 
     def _initialize_fonts(self):
-        """Initialize fonts using configuration settings"""
+        """Inizializza i font usando la configurazione dal template"""
         try:
-            # Get font configuration
-            font_path = self.config_manager.get_font_path()
-            clue_font_size = self.style.get('clue_font', {}).get('size',
-                                                                 self.config_manager.config.clue_font_size)
-            grid_font_size = self.style.get('grid_font', {}).get('size',
-                                                                 self.config_manager.config.grid_font_size)
-
-            if font_path:
-                self.clue_font = ImageFont.truetype(font_path, clue_font_size)
-                self.grid_font = ImageFont.truetype(font_path, grid_font_size)
-                print(f"Custom font loaded - Clue size: {clue_font_size}, Grid size: {grid_font_size}")
+            # Carica il font principale
+            if os.path.isfile(self.font_config.file_path):
+                self.clue_font = ImageFont.truetype(
+                    self.font_config.file_path,
+                    self.font_config.clue_size
+                )
+                self.grid_font = ImageFont.truetype(
+                    self.font_config.file_path,
+                    self.font_config.grid_size
+                )
+                print(f"Loaded font: {self.font_config.file_path}")
             else:
-                print("Using default font")
+                # Per font di sistema
+                print(f"Using system font: {self.font_config.file_path}")
                 default_font = ImageFont.load_default()
                 self.clue_font = default_font
                 self.grid_font = default_font
@@ -455,6 +530,9 @@ class CrosswordVideoGenerator:
         """
         # Converti il testo in maiuscolo
         clue_text = clue_text.upper()
+
+        # Usa i colori dalla configurazione del font
+        text_color = pattern.get('text_color', self.font_config.clue_color)
 
         padding = pattern.get('padding', 20)
         max_width = pattern.get('max_text_width', self.max_text_width)
@@ -1023,85 +1101,97 @@ class CrosswordVideoGenerator:
     def _initialize_cache(self):
         """Inizializza il sistema di cache per celle e lettere"""
         cell_size = self._get_cell_size()
+
+        # Ottieni i colori dal template o usa i default
         bg_color = self._get_style_color('background_color', 'default_background_color')
         border_color = self._get_style_color('border_color', 'default_border_color')
-        inactive_color = (128, 128, 128)
-        text_color = self._get_style_color('text_color', 'default_text_color')
-
-        # Inizializza tutte le cache
-        self._cell_cache = {}
-        self._letter_cache = {}
-        self._composite_cache = {}  # Aggiunto questo
+        highlight_color = self._get_style_color('highlight_color', 'default_highlight_color')
+        inactive_color = (128, 128, 128)  # Colore per celle non attive
+        text_color = self.font_config.grid_color
 
         # Pre-calcola i colori più usati come array numpy
         self._cached_colors = {
             'bg': np.array(bg_color + (255,), dtype=np.uint8),
             'border': np.array(border_color + (255,), dtype=np.uint8),
-            'text': np.array(text_color + (255,), dtype=np.uint8)
+            'text': np.array(text_color + (255,), dtype=np.uint8),
+            'highlight': np.array(highlight_color + (255,), dtype=np.uint8),
+            'inactive': np.array(inactive_color + (255,), dtype=np.uint8)
         }
 
-        # Crea celle base con diversi bordi
-        thickness = 6
-        for border_type in ['initial', 'inactive', 'highlight']:
-            current_border_color = {
-                'initial': border_color,
-                'inactive': inactive_color,
-                'highlight': self._get_style_color('highlight_color', 'default_highlight_color')
-            }[border_type]
+        # Crea celle base con diversi bordi e spessori
+        border_types = ['initial', 'inactive', 'highlight']
+        thicknesses = [6]  # Puoi aggiungere altri spessori se necessario
 
-            cell_img = Image.new('RGBA', (cell_size, cell_size), (*bg_color, 255))
-            cell_draw = ImageDraw.Draw(cell_img)
+        for border_type in border_types:
+            for thickness in thicknesses:
+                # Seleziona il colore del bordo in base al tipo
+                current_border_color = {
+                    'initial': border_color,
+                    'inactive': inactive_color,
+                    'highlight': highlight_color
+                }[border_type]
 
-            half_thickness = thickness / 2
-            borders = [
-                half_thickness,
-                half_thickness,
-                cell_size - half_thickness,
-                cell_size - half_thickness
-            ]
+                # Crea l'immagine base della cella
+                cell_img = Image.new('RGBA', (cell_size, cell_size), (*bg_color, 255))
+                draw = ImageDraw.Draw(cell_img)
 
-            cell_draw.rectangle(
-                borders,
-                outline=(*current_border_color, 255),
-                width=thickness
-            )
+                # Disegna il bordo
+                half_thickness = thickness / 2
+                borders = [
+                    half_thickness,  # left
+                    half_thickness,  # top
+                    cell_size - half_thickness,  # right
+                    cell_size - half_thickness  # bottom
+                ]
 
-            cell_array = np.array(cell_img)
-            self._cell_cache[f'{border_type}_{thickness}'] = cell_array
+                draw.rectangle(
+                    borders,
+                    outline=(*current_border_color, 255),
+                    width=thickness
+                )
 
-            # Pre-genera tutte le combinazioni cella+lettera
-            if border_type != 'initial':  # Non serve per la griglia iniziale
-                grid_font_config = self.style.get('grid_font', {})
-                vertical_adj = grid_font_config.get('vertical_adjustment', -2)
-                horizontal_adj = grid_font_config.get('horizontal_adjustment', 0)
+                # Salva la cella base nella cache
+                cell_array = np.array(cell_img)
+                key = f'{border_type}_{thickness}'
+                self._cell_cache[key] = cell_array
 
-                effective_cell_size = cell_size - (thickness * 2)
+                # Se non è una cella iniziale, prepara anche le versioni con lettere
+                if border_type != 'initial':
+                    # Ottieni le configurazioni per il posizionamento del testo
+                    vertical_adj = self.font_config.vertical_adjustment
+                    horizontal_adj = self.font_config.horizontal_adjustment
 
-                for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-                    # Crea una copia della cella base
-                    composite_img = Image.fromarray(cell_array.copy())
-                    draw = ImageDraw.Draw(composite_img)
+                    effective_cell_size = cell_size - (thickness * 2)
 
-                    # Ottieni le dimensioni della lettera
-                    bbox = self.grid_font.getbbox(letter)
-                    text_width = bbox[2] - bbox[0]
-                    text_height = bbox[3] - bbox[1]
+                    # Crea le versioni con lettere per ogni lettera dell'alfabeto
+                    for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                        # Crea una copia della cella base
+                        composite_img = Image.fromarray(cell_array.copy())
+                        letter_draw = ImageDraw.Draw(composite_img)
 
-                    # Calcola la posizione centrata
-                    x_offset = (effective_cell_size - text_width) // 2 + thickness + horizontal_adj
-                    y_offset = (effective_cell_size - text_height) // 2 + thickness + vertical_adj
+                        # Ottieni le dimensioni della lettera
+                        bbox = self.grid_font.getbbox(letter)
+                        text_width = bbox[2] - bbox[0]
+                        text_height = bbox[3] - bbox[1]
 
-                    # Disegna la lettera
-                    draw.text(
-                        (x_offset, y_offset),
-                        letter,
-                        font=self.grid_font,
-                        fill=(*text_color, 255)
-                    )
+                        # Calcola la posizione centrata con gli aggiustamenti
+                        x_pos = (effective_cell_size - text_width) // 2 + thickness + horizontal_adj
+                        y_pos = (effective_cell_size - text_height) // 2 + thickness + vertical_adj
 
-                    # Salva nella cache composita
-                    key = f'{border_type}_{letter}'
-                    self._composite_cache[key] = np.array(composite_img)
+                        # Disegna la lettera
+                        letter_draw.text(
+                            (x_pos, y_pos),
+                            letter,
+                            font=self.grid_font,
+                            fill=(*text_color, 255)
+                        )
+
+                        # Salva nella cache composita
+                        composite_key = f'{border_type}_{letter}'
+                        self._composite_cache[composite_key] = np.array(composite_img)
+
+        print(f"Cache initialized with {len(self._cell_cache)} cell types and "
+              f"{len(self._composite_cache)} letter combinations")
 
     def _precalculate_animation_timings(self) -> Dict:
         """Pre-calcola i timing delle animazioni per evitare calcoli ripetuti"""
@@ -1213,7 +1303,7 @@ def main():
                     config_manager,
                     file_manager
                 )
-                generator.process_video('input_video.mp4', 'output_video.mp4')
+                generator.process_video('input_video.mp4', 'output_video_2.mp4')
 
         profiler.print_stats()
 

@@ -1,5 +1,23 @@
 {
   "template_id": "type-a",
+  "fonts": {
+    "main": {
+      "file": "PressStart2P-Regular.ttf",
+      "settings": {
+        "clue": {
+          "size": 28,
+          "color": [0, 0, 0]
+        },
+        "grid": {
+          "size": 46,
+          "color": [0, 0, 0],
+          "vertical_adjustment": 4,
+          "horizontal_adjustment": 2
+        }
+      }
+    },
+    "fallback": "Arial"
+  },
   "animation_sequence": [
     {
       "type": "initial_grid",
@@ -75,18 +93,7 @@
       "border_color": [0, 0, 0],
       "background_color": [255, 255, 255],
       "highlight_color": [0, 255, 0],
-      "text_color": [0, 0, 0],
-      "font_scale": 1.0,
-      "clue_font": {
-        "size": 28,
-        "color": [0, 0, 0]
-      },
-      "grid_font": {
-        "size": 46,
-        "color": [0, 0, 0],
-        "vertical_adjustment": 4,
-        "horizontal_adjustment": 2
-      }
+      "text_color": [0, 0, 0]
     }
   },
   "layout": {
