@@ -29,23 +29,42 @@ class FileManager:
     """Gestisce i percorsi dei file e le cartelle del progetto"""
 
     def __init__(self, base_dir: str = None):
+        """
+        Inizializza il gestore dei file
+
+        Args:
+            base_dir: Directory base del progetto. Se None, usa la directory corrente.
+        """
         self.base_dir = Path(base_dir) if base_dir else Path.cwd()
 
         # Definisce le cartelle principali
         self.input_dir = self.base_dir / 'input'
         self.output_dir = self.base_dir / 'output'
-        self.templates_dir = self.base_dir / 'templates'
-        self.data_dir = self.base_dir / 'data'
+
+        # Sottocartelle della directory input
+        self.video_input_dir = self.input_dir / 'videos'
+        self.templates_dir = self.input_dir / 'templates'
+        self.data_dir = self.input_dir / 'data'
+        self.fonts_dir = self.input_dir / 'fonts'
 
         # Crea le cartelle se non esistono
         self._create_directories()
 
-        # Usa tempfile per gestire i file temporanei
+        # Directory temporanea
         self.temp_dir = None
 
     def _create_directories(self):
         """Crea le cartelle necessarie se non esistono"""
-        for directory in [self.input_dir, self.output_dir, self.templates_dir, self.data_dir]:
+        directories = [
+            self.input_dir,
+            self.output_dir,
+            self.video_input_dir,
+            self.templates_dir,
+            self.data_dir,
+            self.fonts_dir
+        ]
+
+        for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
 
     def create_temp_dir(self) -> Path:
@@ -62,7 +81,7 @@ class FileManager:
 
     def get_input_video_path(self, filename: str) -> Path:
         """Restituisce il percorso completo per un video di input"""
-        return self.input_dir / filename
+        return self.video_input_dir / filename
 
     def get_output_video_path(self, filename: str) -> Path:
         """Restituisce il percorso completo per un video di output"""
@@ -75,6 +94,10 @@ class FileManager:
     def get_data_path(self, filename: str) -> Path:
         """Restituisce il percorso completo per un file di dati"""
         return self.data_dir / filename
+
+    def get_font_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un file font"""
+        return self.fonts_dir / filename
 
     def ensure_temp_dir(self) -> Path:
         """Crea e restituisce il percorso della cartella temporanea"""
@@ -270,6 +293,12 @@ class ConfigManager:
                 return None
             return str(path)
         return None
+
+    def update_font_path(self):
+        """Aggiorna il percorso del font nella configurazione"""
+        if self.config.font_path:
+            font_filename = Path(self.config.font_path).name
+            self.config.font_path = str(self.file_manager.get_font_path(font_filename))
 
 class AnimationType(Enum):
     INITIAL_GRID = "initial_grid"
@@ -1153,7 +1182,8 @@ def main():
             required_files = {
                 'input video': file_manager.get_input_video_path('input_video.mp4'),
                 'template': file_manager.get_template_path('template.json'),
-                'crossword data': file_manager.get_data_path('crossword-data.json')
+                'crossword data': file_manager.get_data_path('crossword-data.json'),
+                'font': file_manager.get_font_path('PressStart2P-Regular.ttf')
             }
 
             for name, path in required_files.items():
@@ -1163,7 +1193,7 @@ def main():
             # Configurazione
             with profile_section("Configuration"):
                 config = CrosswordConfig(
-                    font_path='PressStart2P-Regular.ttf',
+                    font_path=str(file_manager.get_font_path('PressStart2P-Regular.ttf')),
                     clue_font_size=24
                 )
                 config_manager = ConfigManager(config, file_manager)
