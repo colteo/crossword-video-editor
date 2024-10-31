@@ -23,7 +23,8 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
-
+import uuid
+from datetime import datetime
 
 class FileManager:
     """Gestisce i percorsi dei file e le cartelle del progetto"""
@@ -52,6 +53,67 @@ class FileManager:
 
         # Directory temporanea
         self.temp_dir = None
+
+    def generate_output_filename(self,
+                                 crossword_type: str,
+                                 template_type: str,
+                                 extension: str = "mp4",
+                                 add_guid: bool = False) -> str:
+        """
+        Genera un nome file per il video di output usando il formato specificato.
+
+        Args:
+            crossword_type: Tipo del cruciverba
+            template_type: Tipo del template
+            extension: Estensione del file (default: mp4)
+            add_guid: Se True, aggiunge un GUID al nome del file
+
+        Returns:
+            str: Nome del file formattato
+        """
+        # Genera la data corrente nel formato YYYYMMDD
+        current_date = datetime.now().strftime("%Y%m%d")
+
+        # Pulisce i nomi dei tipi mantenendo il nome completo
+        clean_crossword_type = self._clean_type_name(crossword_type)
+        clean_template_type = self._clean_type_name(template_type)
+
+        # Costruisce il nome base del file
+        filename_parts = [
+            current_date,
+            clean_crossword_type,
+            clean_template_type
+        ]
+
+        # Aggiunge un GUID se richiesto
+        if add_guid:
+            guid = str(uuid.uuid4())[:8]  # Usa solo i primi 8 caratteri del GUID
+            filename_parts.append(guid)
+
+        # Unisce le parti con underscore e aggiunge l'estensione
+        return f"{'_'.join(filename_parts)}.{extension}"
+
+    def _clean_type_name(self, type_name: str) -> str:
+        """
+        Pulisce il nome del tipo mantenendo il nome completo.
+        Rimuove solo i caratteri non validi per i nomi file.
+
+        Args:
+            type_name: Nome del tipo da pulire
+
+        Returns:
+            str: Nome pulito
+        """
+        # Sostituisce eventuali caratteri non validi per i nomi file con underscore
+        import re
+        # Rimuove caratteri non validi per i nomi file, mantenendo lettere, numeri,
+        # trattini, underscore e spazi
+        clean_name = re.sub(r'[^\w\-\s]', '', type_name)
+
+        # Sostituisce spazi multipli con singolo underscore
+        clean_name = re.sub(r'\s+', '_', clean_name.strip())
+
+        return clean_name
 
     def _create_directories(self):
         """Crea le cartelle necessarie se non esistono"""
@@ -83,8 +145,24 @@ class FileManager:
         """Restituisce il percorso completo per un video di input"""
         return self.video_input_dir / filename
 
-    def get_output_video_path(self, filename: str) -> Path:
-        """Restituisce il percorso completo per un video di output"""
+    def get_output_video_path(self, template_data: dict, crossword_data: dict,
+                              add_guid: bool = False) -> Path:
+        """
+        Genera il percorso completo per il file video di output basato sui dati forniti.
+
+        Args:
+            template_data: Dati del template
+            crossword_data: Dati del cruciverba
+            add_guid: Se True, aggiunge un GUID al nome del file
+
+        Returns:
+            Path: Percorso completo del file di output
+        """
+        filename = self.generate_output_filename(
+            crossword_type=crossword_data.get('crossword_type', 'unknown'),
+            template_type=template_data.get('template_type', 'unknown'),
+            add_guid=add_guid
+        )
         return self.output_dir / filename
 
     def get_template_path(self, filename: str) -> Path:
@@ -264,7 +342,7 @@ class ConfigManager:
 
     def validate_template(self, data: Dict[str, Any]) -> bool:
         """Validate template structure"""
-        required_fields = ['template_id', 'animation_sequence', 'style_settings']
+        required_fields = ['template_type', 'animation_sequence', 'style_settings']
 
         if not all(field in data for field in required_fields):
             missing = [f for f in required_fields if f not in data]
@@ -401,6 +479,9 @@ class CrosswordVideoGenerator:
             config_manager: Optional ConfigManager per la configurazione personalizzata
             file_manager: Optional FileManager per la gestione dei file
         """
+        self.template_data = template_data  # Salviamo i dati del template
+        self.crossword_data = crossword_data  # Salviamo i dati del crossword
+
         # Inizializza prima gli attributi base
         self._frame_buffer_size = 32
         self._frame_buffer = []
@@ -790,21 +871,21 @@ class CrosswordVideoGenerator:
                                                alpha_background * background[y:y + h, x:x + w, c])
 
     @profile
-    def process_video(self, input_video_name: str, output_video_name: str):
+    def process_video(self, input_video_name: str):
         """
         Process video with optimized frame handling and detailed profiling
 
         Args:
             input_video_name: Nome del file video di input
-            output_video_name: Nome del file video di output
-
-        Raises:
-            FileNotFoundError: Se il file di input non esiste
-            ValueError: Se il video non può essere aperto
-            Exception: Per altri errori durante il processo
         """
+        # Genera il nome del file di output basato sui dati del template e del crossword
+        output_path = self.file_manager.get_output_video_path(
+            template_data=self.template_data,
+            crossword_data=self.crossword_data,
+            add_guid=True
+        )
+
         input_video_path = self.file_manager.get_input_video_path(input_video_name)
-        output_video_path = self.file_manager.get_output_video_path(output_video_name)
 
         if not input_video_path.exists():
             raise FileNotFoundError(f"Input video not found: {input_video_path}")
@@ -841,6 +922,7 @@ class CrosswordVideoGenerator:
                 print(f"FPS: {self.fps}")
                 print(f"Resolution: {self.width}x{self.height}")
                 print(f"Buffer size: {buffer_size} frames")
+                print(f"Output will be saved as: {output_path.name}")
 
             try:
                 # Pre-calcola i timing delle animazioni
@@ -869,13 +951,9 @@ class CrosswordVideoGenerator:
                         processed_frames = []
                         with profile_section("Process Frames Batch"):
                             for frame in frames_batch:
-                                # Crea una copia del frame per non modificare l'originale
                                 result = frame.copy()
-
-                                # Applica le animazioni al frame
                                 self._process_frame_with_cached_timings(
                                     result, frame_number, animation_timings)
-
                                 processed_frames.append(result)
                                 frame_number += 1
 
@@ -916,12 +994,12 @@ class CrosswordVideoGenerator:
                         final_video = processed_video.set_audio(original_video.audio)
 
                         # Assicurati che la directory di output esista
-                        output_video_path.parent.mkdir(parents=True, exist_ok=True)
+                        output_path.parent.mkdir(parents=True, exist_ok=True)
 
                         # Scrivi il video finale
                         print("Writing final video with audio...")
                         final_video.write_videofile(
-                            str(output_video_path),
+                            str(output_path),
                             codec='libx264',
                             audio_codec='aac',
                             verbose=False,
@@ -933,13 +1011,13 @@ class CrosswordVideoGenerator:
                         processed_video.close()
                         original_video.close()
 
-                        print(f"Video successfully saved to: {output_video_path}")
+                        print(f"Video successfully saved to: {output_path}")
 
                     except Exception as e:
                         print(f"Warning: Error during audio processing: {e}")
                         print("Saving video without audio...")
                         if temp_output.exists():
-                            shutil.copy2(str(temp_output), str(output_video_path))
+                            shutil.copy2(str(temp_output), str(output_path))
                         else:
                             raise FileNotFoundError("Temporary video file not found")
 
@@ -1303,7 +1381,9 @@ def main():
                     config_manager,
                     file_manager
                 )
-                generator.process_video('input_video.mp4', 'output_video_2.mp4')
+
+                # Processa il video con il nuovo nome file
+                generator.process_video('input_video.mp4')
 
         profiler.print_stats()
 
@@ -1312,7 +1392,6 @@ def main():
     except Exception as e:
         print(f"Error: {e}")
     finally:
-        # Assicurati che i file temporanei vengano puliti anche in caso di errore
         try:
             file_manager.cleanup_temp_files()
         except:
