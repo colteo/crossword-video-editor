@@ -17,6 +17,79 @@ import functools
 from contextlib import contextmanager
 from typing import Dict, Optional
 import statistics
+import os
+from pathlib import Path
+import os
+from pathlib import Path
+import shutil
+import tempfile
+
+
+class FileManager:
+    """Gestisce i percorsi dei file e le cartelle del progetto"""
+
+    def __init__(self, base_dir: str = None):
+        self.base_dir = Path(base_dir) if base_dir else Path.cwd()
+
+        # Definisce le cartelle principali
+        self.input_dir = self.base_dir / 'input'
+        self.output_dir = self.base_dir / 'output'
+        self.templates_dir = self.base_dir / 'templates'
+        self.data_dir = self.base_dir / 'data'
+
+        # Crea le cartelle se non esistono
+        self._create_directories()
+
+        # Usa tempfile per gestire i file temporanei
+        self.temp_dir = None
+
+    def _create_directories(self):
+        """Crea le cartelle necessarie se non esistono"""
+        for directory in [self.input_dir, self.output_dir, self.templates_dir, self.data_dir]:
+            directory.mkdir(parents=True, exist_ok=True)
+
+    def create_temp_dir(self) -> Path:
+        """Crea una directory temporanea"""
+        if self.temp_dir is None:
+            self.temp_dir = Path(tempfile.mkdtemp(dir=self.output_dir))
+        return self.temp_dir
+
+    def get_temp_file_path(self, filename: str) -> Path:
+        """Ottiene il percorso per un file temporaneo"""
+        if self.temp_dir is None:
+            self.create_temp_dir()
+        return self.temp_dir / filename
+
+    def get_input_video_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un video di input"""
+        return self.input_dir / filename
+
+    def get_output_video_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un video di output"""
+        return self.output_dir / filename
+
+    def get_template_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un file template"""
+        return self.templates_dir / filename
+
+    def get_data_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un file di dati"""
+        return self.data_dir / filename
+
+    def ensure_temp_dir(self) -> Path:
+        """Crea e restituisce il percorso della cartella temporanea"""
+        temp_dir = self.output_dir / 'temp'
+        temp_dir.mkdir(exist_ok=True)
+        return temp_dir
+
+    def cleanup_temp_files(self):
+        """Pulisce i file temporanei in modo sicuro"""
+        if self.temp_dir and self.temp_dir.exists():
+            try:
+                shutil.rmtree(str(self.temp_dir))
+                self.temp_dir = None
+            except Exception as e:
+                print(f"Warning: Error cleaning temporary files: {e}")
 
 
 class SimpleProfiler:
@@ -121,25 +194,30 @@ class CrosswordConfig:
 class ConfigManager:
     """Manages configuration loading and validation for crossword video generation"""
 
-    def __init__(self, config: Optional[CrosswordConfig] = None):
+    def __init__(self, config: Optional[CrosswordConfig] = None, file_manager: Optional[FileManager] = None):
         self.config = config or CrosswordConfig()
+        self.file_manager = file_manager or FileManager()
 
-    @staticmethod
-    def load_json_file(file_path: str) -> Dict[str, Any]:
+    def load_json_file(self, filename: str) -> Dict[str, Any]:
         """Load and validate a JSON file"""
         try:
-            path = Path(file_path)
+            # Determina il tipo di file e usa il percorso appropriato
+            if filename.startswith('template'):
+                path = self.file_manager.get_template_path(filename)
+            else:
+                path = self.file_manager.get_data_path(filename)
+
             if not path.exists():
-                raise FileNotFoundError(f"File not found: {file_path}")
+                raise FileNotFoundError(f"File not found: {path}")
 
             with path.open('r', encoding='utf-8') as f:
                 data = json.load(f)
             return data
 
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in {file_path}: {str(e)}")
+            raise ValueError(f"Invalid JSON in {path}: {str(e)}")
         except Exception as e:
-            raise Exception(f"Error loading {file_path}: {str(e)}")
+            raise Exception(f"Error loading {path}: {str(e)}")
 
     def validate_crossword_data(self, data: Dict[str, Any]) -> bool:
         """Validate crossword data structure"""
@@ -214,7 +292,9 @@ class TimingInfo:
 
 class CrosswordVideoGenerator:
     @profile
-    def __init__(self, template_data: Dict, crossword_data: Dict, config_manager: Optional[ConfigManager] = None):
+    def __init__(self, template_data: Dict, crossword_data: Dict,
+                 config_manager: Optional[ConfigManager] = None,
+                 file_manager: Optional[FileManager] = None):
         """
         Inizializza il generatore del video con la corretta sequenza di inizializzazione e ottimizzazioni
 
@@ -223,6 +303,8 @@ class CrosswordVideoGenerator:
             crossword_data: Dictionary containing crossword data
             config_manager: Optional ConfigManager instance for custom configuration
         """
+        self.file_manager = file_manager or FileManager()
+
         # Configurazione del buffer per i frame
         self._frame_buffer_size = 32  # Dimensione del buffer, modificabile
         self._frame_buffer = []
@@ -601,141 +683,178 @@ class CrosswordVideoGenerator:
                                                alpha_background * background[y:y + h, x:x + w, c])
 
     @profile
-    def process_video(self, input_video_path: str, output_video_path: str):
+    def process_video(self, input_video_name: str, output_video_name: str):
         """
         Process video with optimized frame handling and detailed profiling
 
         Args:
-            input_video_path: Path to the input video file
-            output_video_path: Path where to save the processed video
+            input_video_name: Nome del file video di input
+            output_video_name: Nome del file video di output
+
+        Raises:
+            FileNotFoundError: Se il file di input non esiste
+            ValueError: Se il video non può essere aperto
+            Exception: Per altri errori durante il processo
         """
-        # Apertura video e inizializzazione
-        with profile_section("Video Open"):
-            cap = cv2.VideoCapture(input_video_path)
-            if not cap.isOpened():
-                raise ValueError("Unable to open input video")
+        input_video_path = self.file_manager.get_input_video_path(input_video_name)
+        output_video_path = self.file_manager.get_output_video_path(output_video_name)
 
-            # Ottieni i parametri del video
-            self.width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            self.fps = int(cap.get(cv2.CAP_PROP_FPS))
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if not input_video_path.exists():
+            raise FileNotFoundError(f"Input video not found: {input_video_path}")
 
-            # Prepara il file di output temporaneo
-            temp_output = "temp_output.mp4"
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter(temp_output, fourcc, self.fps,
-                                  (self.width, self.height))
+        # Crea un file temporaneo con nome univoco
+        temp_output = self.file_manager.get_temp_file_path("temp_output.mp4")
 
-            # Dimensione del buffer per il batch processing
-            buffer_size = self._frame_buffer_size
-
-            print(f"Starting video processing...")
-            print(f"Total frames: {total_frames}")
-            print(f"FPS: {self.fps}")
-            print(f"Resolution: {self.width}x{self.height}")
-            print(f"Buffer size: {buffer_size} frames")
+        cap = None
+        out = None
 
         try:
-            # Pre-calcola i timing delle animazioni
-            with profile_section("Timing Precalculation"):
-                animation_timings = self._precalculate_animation_timings()
+            # Apertura video e inizializzazione
+            with profile_section("Video Open"):
+                cap = cv2.VideoCapture(str(input_video_path))
+                if not cap.isOpened():
+                    raise ValueError(f"Unable to open input video: {input_video_path}")
 
-            frame_number = 0
-            frames_processed = 0
+                # Ottieni i parametri del video
+                self.width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                self.fps = int(cap.get(cv2.CAP_PROP_FPS))
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-            with profile_section("Frame Processing"):
-                while cap.isOpened():
-                    # Leggi un batch di frame
-                    with profile_section("Read Frames Batch"):
-                        frames_batch = []
-                        for _ in range(buffer_size):
-                            ret, frame = cap.read()
-                            if not ret:
-                                break
-                            frames_batch.append(frame)
+                # Prepara il file di output temporaneo
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                out = cv2.VideoWriter(str(temp_output), fourcc, self.fps,
+                                      (self.width, self.height))
 
-                    if not frames_batch:
-                        break
+                # Dimensione del buffer per il batch processing
+                buffer_size = self._frame_buffer_size
 
-                    # Processa il batch di frame
-                    processed_frames = []
-                    with profile_section("Process Frames Batch"):
-                        for frame in frames_batch:
-                            with profile_section("Process Single Frame"):
+                print(f"Starting video processing...")
+                print(f"Total frames: {total_frames}")
+                print(f"FPS: {self.fps}")
+                print(f"Resolution: {self.width}x{self.height}")
+                print(f"Buffer size: {buffer_size} frames")
+
+            try:
+                # Pre-calcola i timing delle animazioni
+                with profile_section("Timing Precalculation"):
+                    animation_timings = self._precalculate_animation_timings()
+
+                frame_number = 0
+                frames_processed = 0
+                last_progress_update = 0
+
+                with profile_section("Frame Processing"):
+                    while True:
+                        # Leggi un batch di frame
+                        with profile_section("Read Frames Batch"):
+                            frames_batch = []
+                            for _ in range(buffer_size):
+                                ret, frame = cap.read()
+                                if not ret:
+                                    break
+                                frames_batch.append(frame)
+
+                        if not frames_batch:
+                            break
+
+                        # Processa il batch di frame
+                        processed_frames = []
+                        with profile_section("Process Frames Batch"):
+                            for frame in frames_batch:
+                                # Crea una copia del frame per non modificare l'originale
                                 result = frame.copy()
+
+                                # Applica le animazioni al frame
                                 self._process_frame_with_cached_timings(
                                     result, frame_number, animation_timings)
+
                                 processed_frames.append(result)
                                 frame_number += 1
 
-                    # Scrivi il batch di frame processati
-                    with profile_section("Write Frames Batch"):
-                        for frame in processed_frames:
-                            out.write(frame)
-                            frames_processed += 1
+                        # Scrivi il batch di frame processati
+                        with profile_section("Write Frames Batch"):
+                            for frame in processed_frames:
+                                out.write(frame)
+                                frames_processed += 1
 
-                    # Aggiorna il progresso
-                    if frames_processed % self.fps == 0:
-                        progress = (frames_processed / total_frames) * 100
-                        print(f"Processed {frames_processed}/{total_frames} frames "
-                              f"({progress:.1f}%) - "
-                              f"{frames_processed / self.fps:.1f} seconds")
+                        # Aggiorna il progresso ogni secondo
+                        current_time = frames_processed / self.fps
+                        if current_time - last_progress_update >= 1.0:
+                            progress = (frames_processed / total_frames) * 100
+                            print(f"Processed {frames_processed}/{total_frames} frames "
+                                  f"({progress:.1f}%) - "
+                                  f"{current_time:.1f} seconds")
+                            last_progress_update = current_time
 
-            # Chiudi i file video
-            with profile_section("Cleanup"):
-                cap.release()
-                out.release()
+                print("\nFrame processing completed!")
 
-            # Gestione dell'audio e finalizzazione
-            with profile_section("Audio Processing"):
-                print("\nCombining video with original audio...")
-                try:
-                    original_video = VideoFileClip(input_video_path)
-                    processed_video = VideoFileClip(temp_output)
+                # Chiudi i writer
+                if out is not None:
+                    out.release()
 
-                    # Copia l'audio originale
-                    final_video = processed_video.set_audio(original_video.audio)
+                # Verifica che il file temporaneo sia stato creato
+                if not temp_output.exists():
+                    raise FileNotFoundError(f"Failed to create temporary video file: {temp_output}")
 
-                    # Scrivi il video finale con l'audio
-                    final_video.write_videofile(
-                        output_video_path,
-                        codec='libx264',
-                        audio_codec='aac',
-                        verbose=False,
-                        logger=None
-                    )
+                # Gestione dell'audio e finalizzazione
+                with profile_section("Audio Processing"):
+                    print("\nCombining video with original audio...")
+                    try:
+                        # Carica i video
+                        original_video = VideoFileClip(str(input_video_path))
+                        processed_video = VideoFileClip(str(temp_output))
 
-                    # Chiudi i file
-                    original_video.close()
-                    processed_video.close()
+                        # Copia l'audio originale
+                        final_video = processed_video.set_audio(original_video.audio)
 
-                    # Rimuovi il file temporaneo
-                    import os
-                    os.remove(temp_output)
+                        # Assicurati che la directory di output esista
+                        output_video_path.parent.mkdir(parents=True, exist_ok=True)
 
-                except Exception as e:
-                    print(f"Warning: Error during audio processing: {e}")
-                    print("Saving video without audio...")
-                    import shutil
-                    shutil.move(temp_output, output_video_path)
+                        # Scrivi il video finale
+                        print("Writing final video with audio...")
+                        final_video.write_videofile(
+                            str(output_video_path),
+                            codec='libx264',
+                            audio_codec='aac',
+                            verbose=False,
+                            logger=None
+                        )
 
-            print(f"\nVideo processing completed!")
-            print(f"Output saved to: {output_video_path}")
-            print(f"Total frames processed: {frames_processed}")
-            print(f"Total duration: {frames_processed / self.fps:.2f} seconds")
+                        # Chiudi i video in ordine inverso rispetto all'apertura
+                        final_video.close()
+                        processed_video.close()
+                        original_video.close()
+
+                        print(f"Video successfully saved to: {output_video_path}")
+
+                    except Exception as e:
+                        print(f"Warning: Error during audio processing: {e}")
+                        print("Saving video without audio...")
+                        if temp_output.exists():
+                            shutil.copy2(str(temp_output), str(output_video_path))
+                        else:
+                            raise FileNotFoundError("Temporary video file not found")
+
+            except Exception as e:
+                raise Exception(f"Error during frame processing: {str(e)}")
 
         except Exception as e:
-            # Gestione degli errori
-            print(f"Error during video processing: {e}")
-            # Assicurati di chiudere i file in caso di errore
-            cap.release()
-            out.release()
-            # Rimuovi il file temporaneo se esiste
-            import os
-            if os.path.exists(temp_output):
-                os.remove(temp_output)
-            raise e
+            raise Exception(f"Error processing video: {str(e)}")
+
+        finally:
+            # Cleanup
+            if cap is not None:
+                cap.release()
+            if out is not None:
+                out.release()
+
+            # Pulisci i file temporanei
+            self.file_manager.cleanup_temp_files()
+
+            print("\nProcessing completed!")
+            if profiler:
+                profiler.print_stats()
 
     def _get_word_letters_sequence(self, word: Dict) -> List[Tuple[int, int, str]]:
         """
@@ -1023,34 +1142,62 @@ class CrosswordVideoGenerator:
         horizontal_adj = grid_font_config.get('horizontal_adjustment', 0)
         return horizontal_adj, vertical_adj
 
+
 def main():
     try:
         with profile_section("Total Execution"):
+            # Inizializza il file manager
+            file_manager = FileManager()
+
+            # Verifica che i file necessari esistano
+            required_files = {
+                'input video': file_manager.get_input_video_path('input_video.mp4'),
+                'template': file_manager.get_template_path('template.json'),
+                'crossword data': file_manager.get_data_path('crossword-data.json')
+            }
+
+            for name, path in required_files.items():
+                if not path.exists():
+                    raise FileNotFoundError(f"Required {name} file not found: {path}")
+
+            # Configurazione
             with profile_section("Configuration"):
                 config = CrosswordConfig(
                     font_path='PressStart2P-Regular.ttf',
                     clue_font_size=24
                 )
-                config_manager = ConfigManager(config)
+                config_manager = ConfigManager(config, file_manager)
 
+            # Caricamento dati
             with profile_section("Data Loading"):
                 template_data = config_manager.load_json_file('template.json')
                 crossword_data = config_manager.load_json_file('crossword-data.json')
                 config_manager.validate_template(template_data)
                 config_manager.validate_crossword_data(crossword_data)
 
+            # Generazione video
             with profile_section("Video Generation"):
                 generator = CrosswordVideoGenerator(
                     template_data,
                     crossword_data,
-                    config_manager
+                    config_manager,
+                    file_manager
                 )
                 generator.process_video('input_video.mp4', 'output_video.mp4')
 
         profiler.print_stats()
 
+    except FileNotFoundError as e:
+        print(f"File Error: {e}")
     except Exception as e:
         print(f"Error: {e}")
+    finally:
+        # Assicurati che i file temporanei vengano puliti anche in caso di errore
+        try:
+            file_manager.cleanup_temp_files()
+        except:
+            pass
+
 
 if __name__ == "__main__":
     main()
