@@ -1,112 +1,114 @@
 {
-  "crossword_type": "crossword-type-a",
-  "grid": [
-    [
-      "G",
-      "_",
-      "_",
-      "_",
-      "U",
-      "S",
-      "A",
-      "_"
+  "crossword_data": {
+    "crossword_type": "crossword-type-a",
+    "grid": [
+      [
+        "G",
+        "_",
+        "_",
+        "_",
+        "U",
+        "S",
+        "A",
+        "_"
+      ],
+      [
+        "E",
+        "_",
+        "_",
+        "_",
+        "_",
+        "_",
+        "S",
+        "_"
+      ],
+      [
+        "I",
+        "_",
+        "_",
+        "_",
+        "_",
+        "_",
+        "L",
+        "_"
+      ],
+      [
+        "S",
+        "T",
+        "A",
+        "G",
+        "E",
+        "S",
+        "E",
+        "T"
+      ],
+      [
+        "H",
+        "_",
+        "_",
+        "_",
+        "_",
+        "_",
+        "E",
+        "_"
+      ],
+      [
+        "A",
+        "L",
+        "C",
+        "O",
+        "P",
+        "O",
+        "P",
+        "_"
+      ]
     ],
-    [
-      "E",
-      "_",
-      "_",
-      "_",
-      "_",
-      "_",
-      "S",
-      "_"
-    ],
-    [
-      "I",
-      "_",
-      "_",
-      "_",
-      "_",
-      "_",
-      "L",
-      "_"
-    ],
-    [
-      "S",
-      "T",
-      "A",
-      "G",
-      "E",
-      "S",
-      "E",
-      "T"
-    ],
-    [
-      "H",
-      "_",
-      "_",
-      "_",
-      "_",
-      "_",
-      "E",
-      "_"
-    ],
-    [
-      "A",
-      "L",
-      "C",
-      "O",
-      "P",
-      "O",
-      "P",
-      "_"
+    "words": [
+      {
+        "text": "STAGESET",
+        "x": 0,
+        "y": 3,
+        "is_horizontal": true,
+        "clue": "Mark to remain a long time confined in flats, typically",
+        "word_pattern": "5,3",
+        "num_words": "2 words"
+      },
+      {
+        "text": "GEISHA",
+        "x": 0,
+        "y": 0,
+        "is_horizontal": false,
+        "clue": "Trained Japanese hostess — his age (anag)",
+        "word_pattern": "6",
+        "num_words": "1 words"
+      },
+      {
+        "text": "ASLEEP",
+        "x": 6,
+        "y": 0,
+        "is_horizontal": false,
+        "clue": "Not active",
+        "word_pattern": "6",
+        "num_words": "1 words"
+      },
+      {
+        "text": "ALCOPOP",
+        "x": 0,
+        "y": 5,
+        "is_horizontal": true,
+        "clue": "Drink in a large can initially works",
+        "word_pattern": "7",
+        "num_words": "1 words"
+      },
+      {
+        "text": "USA",
+        "x": 4,
+        "y": 0,
+        "is_horizontal": true,
+        "clue": "Country captured by Marcus Aurelius",
+        "word_pattern": "3",
+        "num_words": "1 words"
+      }
     ]
-  ],
-  "words": [
-    {
-      "text": "STAGESET",
-      "x": 0,
-      "y": 3,
-      "is_horizontal": true,
-      "clue": "Mark to remain a long time confined in flats, typically",
-      "word_pattern": "5,3",
-      "num_words": "2 words"
-    },
-    {
-      "text": "GEISHA",
-      "x": 0,
-      "y": 0,
-      "is_horizontal": false,
-      "clue": "Trained Japanese hostess — his age (anag)",
-      "word_pattern": "6",
-      "num_words": "1 words"
-    },
-    {
-      "text": "ASLEEP",
-      "x": 6,
-      "y": 0,
-      "is_horizontal": false,
-      "clue": "Not active",
-      "word_pattern": "6",
-      "num_words": "1 words"
-    },
-    {
-      "text": "ALCOPOP",
-      "x": 0,
-      "y": 5,
-      "is_horizontal": true,
-      "clue": "Drink in a large can initially works",
-      "word_pattern": "7",
-      "num_words": "1 words"
-    },
-    {
-      "text": "USA",
-      "x": 4,
-      "y": 0,
-      "is_horizontal": true,
-      "clue": "Country captured by Marcus Aurelius",
-      "word_pattern": "3",
-      "num_words": "1 words"
-    }
-  ]
+  }
 }

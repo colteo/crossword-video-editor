@@ -1,12 +1,14 @@
+from flask import Flask, request, jsonify
 from src.utils.profiler import profiler, profile, profile_section
 from src.utils.file_manager import FileManager
-from src.types.crossword_types import (
-    CrosswordConfig,
-)
+from src.types.crossword_types import CrosswordConfig
 from src.config.config_manager import ConfigManager
 from src.core.crossword_video_generator import CrosswordVideoGenerator
+import json
 
-def main():
+app = Flask(__name__)
+
+def generate_video(crossword_data):
     try:
         with profile_section("Total Execution"):
             # Inizializza il file manager
@@ -16,7 +18,6 @@ def main():
             required_files = {
                 'input video': file_manager.get_input_video_path('input_video.mp4'),
                 'template': file_manager.get_template_path('template.json'),
-                'crossword data': file_manager.get_data_path('crossword-data-hidden-word.json'),
                 'font': file_manager.get_font_path('PressStart2P-Regular.ttf')
             }
 
@@ -32,10 +33,9 @@ def main():
                 )
                 config_manager = ConfigManager(config, file_manager)
 
-            # Caricamento dati
+            # Caricamento e validazione del template
             with profile_section("Data Loading"):
                 template_data = config_manager.load_json_file('template.json')
-                crossword_data = config_manager.load_json_file('crossword-data-hidden-word.json')
                 config_manager.validate_template(template_data)
                 config_manager.validate_crossword_data(crossword_data)
 
@@ -52,17 +52,27 @@ def main():
                 generator.process_video('input_video.mp4')
 
         profiler.print_stats()
+        return {"status": "success", "message": "Video generated successfully"}
 
     except FileNotFoundError as e:
-        print(f"File Error: {e}")
+        return {"status": "error", "message": f"File Error: {e}"}
     except Exception as e:
-        print(f"Error: {e}")
+        return {"status": "error", "message": f"Error: {e}"}
     finally:
         try:
             file_manager.cleanup_temp_files()
         except:
             pass
 
+@app.route('/generate-video', methods=['POST'])
+def generate_video_api():
+    data = request.get_json()
+    if not data or 'crossword_data' not in data:
+        return jsonify({"status": "error", "message": "Missing 'crossword_data' in request"}), 400
+
+    crossword_data = data['crossword_data']
+    result = generate_video(crossword_data)
+    return jsonify(result)
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)
