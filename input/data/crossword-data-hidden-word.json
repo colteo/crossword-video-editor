@@ -1,0 +1,142 @@
+{
+  "metadata": {
+    "guid": "294900c9-7273-4640-a5a8-ece5721806a2",
+    "timestamp": "20241104-110803",
+    "grid_size": 5,
+    "cell_size": 75,
+    "type": "hidden_word"
+  },
+  "hidden_word": {
+    "word": "TAUNT",
+    "column": 5
+  },
+  "grid": [
+    [
+      "_",
+      "_",
+      "F",
+      "O",
+      "N",
+      "T",
+      "_",
+      "_",
+      "_",
+      "_"
+    ],
+    [
+      "M",
+      "A",
+      "I",
+      "N",
+      "T",
+      "A",
+      "I",
+      "N",
+      "_",
+      "_"
+    ],
+    [
+      "C",
+      "A",
+      "L",
+      "I",
+      "G",
+      "U",
+      "L",
+      "A",
+      "_",
+      "_"
+    ],
+    [
+      "P",
+      "R",
+      "E",
+      "T",
+      "E",
+      "N",
+      "S",
+      "I",
+      "O",
+      "N"
+    ],
+    [
+      "A",
+      "M",
+      "E",
+      "N",
+      "I",
+      "T",
+      "Y",
+      "_",
+      "_",
+      "_"
+    ]
+  ],
+  "words": [
+    {
+      "text": "FONT",
+      "x": 2,
+      "y": 0,
+      "is_horizontal": true,
+      "clue": "Baptismal bath",
+      "word_pattern": "4",
+      "num_words": "1 words",
+      "intersection": {
+        "position": 3,
+        "letter": "T"
+      }
+    },
+    {
+      "text": "MAINTAIN",
+      "x": 0,
+      "y": 1,
+      "is_horizontal": true,
+      "clue": "Keep in good order",
+      "word_pattern": "8",
+      "num_words": "1 words",
+      "intersection": {
+        "position": 5,
+        "letter": "A"
+      }
+    },
+    {
+      "text": "CALIGULA",
+      "x": 0,
+      "y": 2,
+      "is_horizontal": true,
+      "clue": "Emperor in cape others in Rome drag back inside",
+      "word_pattern": "8",
+      "num_words": "1 words",
+      "intersection": {
+        "position": 5,
+        "letter": "U"
+      }
+    },
+    {
+      "text": "PRETENSION",
+      "x": 0,
+      "y": 3,
+      "is_horizontal": true,
+      "clue": "…  before strained situation leads to unjustified claim",
+      "word_pattern": "10",
+      "num_words": "1 words",
+      "intersection": {
+        "position": 5,
+        "letter": "N"
+      }
+    },
+    {
+      "text": "AMENITY",
+      "x": 0,
+      "y": 4,
+      "is_horizontal": true,
+      "clue": "Useful feature — any time (anag)",
+      "word_pattern": "7",
+      "num_words": "1 words",
+      "intersection": {
+        "position": 5,
+        "letter": "T"
+      }
+    }
+  ]
+}

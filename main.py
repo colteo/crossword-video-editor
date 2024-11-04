@@ -1,17 +1,12 @@
-import time
 import cv2
-import json
-import textwrap
 import numpy as np
 from typing import Dict, List, Tuple, Set
-from dataclasses import dataclass
 from enum import Enum, auto
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 import json
-from pathlib import Path
 import time
 import functools
 from contextlib import contextmanager
@@ -19,12 +14,33 @@ from typing import Dict, Optional
 import statistics
 import os
 from pathlib import Path
-import os
-from pathlib import Path
 import shutil
 import tempfile
 import uuid
 from datetime import datetime
+
+class CrosswordType(Enum):
+    STANDARD = "standard"
+    HIDDEN_WORD = "hidden_word"
+
+@dataclass
+class HiddenWordInfo:
+    word: str
+    column: int
+
+@dataclass
+class WordIntersection:
+    position: int
+    letter: str
+
+@dataclass
+class CrosswordMetadata:
+    guid: Optional[str] = None
+    timestamp: Optional[str] = None
+    grid_size: Optional[int] = None
+    cell_size: Optional[int] = None
+    crossword_type: CrosswordType = CrosswordType.STANDARD
+
 
 class FileManager:
     """Gestisce i percorsi dei file e le cartelle del progetto"""
@@ -321,7 +337,51 @@ class ConfigManager:
             raise Exception(f"Error loading {path}: {str(e)}")
 
     def validate_crossword_data(self, data: Dict[str, Any]) -> bool:
-        """Validate crossword data structure"""
+        """Validate crossword data structure for both standard and hidden word types"""
+        # Check if metadata exists to determine crossword type
+        if 'metadata' in data and data['metadata'].get('type') == 'hidden_word':
+            return self._validate_hidden_word_crossword(data)
+        return self._validate_standard_crossword(data)
+
+    def _validate_hidden_word_crossword(self, data: Dict[str, Any]) -> bool:
+        """Validate hidden word crossword structure"""
+        # Validate required sections
+        required_sections = ['metadata', 'hidden_word', 'grid', 'words']
+        if not all(section in data for section in required_sections):
+            missing = [s for s in required_sections if s not in data]
+            raise ValueError(f"Missing required sections in hidden word crossword: {missing}")
+
+        # Validate metadata
+        required_metadata = ['guid', 'timestamp', 'grid_size', 'cell_size', 'type']
+        metadata = data['metadata']
+        if not all(field in metadata for field in required_metadata):
+            missing = [f for f in required_metadata if f not in metadata]
+            raise ValueError(f"Missing required metadata fields: {missing}")
+
+        # Validate hidden word data
+        hidden_word = data['hidden_word']
+        if not all(field in hidden_word for field in ['word', 'column']):
+            raise ValueError("Hidden word data must contain 'word' and 'column'")
+
+        # Validate grid
+        if not isinstance(data['grid'], list) or not all(isinstance(row, list) for row in data['grid']):
+            raise ValueError("Grid must be a 2D array")
+
+        # Validate words and intersections
+        for word in data['words']:
+            required_word_fields = ['text', 'x', 'y', 'is_horizontal', 'clue', 'intersection']
+            if not all(field in word for field in required_word_fields):
+                raise ValueError(f"Word missing required fields: {word}")
+
+            # Validate intersection data
+            intersection = word['intersection']
+            if not all(field in intersection for field in ['position', 'letter']):
+                raise ValueError(f"Invalid intersection data in word: {word}")
+
+        return True
+
+    def _validate_standard_crossword(self, data: Dict[str, Any]) -> bool:
+        """Validate standard crossword structure"""
         required_fields = ['grid', 'words']
 
         if not all(field in data for field in required_fields):
@@ -479,10 +539,11 @@ class CrosswordVideoGenerator:
             config_manager: Optional ConfigManager per la configurazione personalizzata
             file_manager: Optional FileManager per la gestione dei file
         """
-        self.template_data = template_data  # Salviamo i dati del template
-        self.crossword_data = crossword_data  # Salviamo i dati del crossword
+        # Salva subito i dati di input come attributi della classe
+        self.template_data = template_data
+        self.crossword_data = crossword_data
 
-        # Inizializza prima gli attributi base
+        # Inizializza gli attributi base
         self._frame_buffer_size = 32
         self._frame_buffer = []
         self.fps = None
@@ -495,6 +556,34 @@ class CrosswordVideoGenerator:
         self.config_manager = config_manager or ConfigManager()
         self.font_manager = FontManager(self.file_manager)
 
+        # Determina e inizializza il tipo di cruciverba
+        self.crossword_type = CrosswordType.HIDDEN_WORD if 'metadata' in crossword_data and \
+            crossword_data['metadata'].get('type') == 'hidden_word' else CrosswordType.STANDARD
+
+        # Inizializza metadata
+        if 'metadata' in crossword_data:
+            metadata = crossword_data['metadata']
+            self.metadata = CrosswordMetadata(
+                guid=metadata.get('guid'),
+                timestamp=metadata.get('timestamp'),
+                grid_size=metadata.get('grid_size'),
+                cell_size=metadata.get('cell_size'),
+                crossword_type=self.crossword_type
+            )
+        else:
+            # Metadata di default per cruciverba standard
+            self.metadata = CrosswordMetadata(
+                crossword_type=self.crossword_type
+            )
+
+        # Inizializza hidden word info se necessario
+        self.hidden_word_info = None
+        if self.crossword_type == CrosswordType.HIDDEN_WORD and 'hidden_word' in crossword_data:
+            self.hidden_word_info = HiddenWordInfo(
+                word=crossword_data['hidden_word']['word'],
+                column=crossword_data['hidden_word']['column']
+            )
+
         # Inizializza le cache come attributi vuoti
         self._cell_cache = {}
         self._letter_cache = {}
@@ -502,12 +591,11 @@ class CrosswordVideoGenerator:
         self._cell_positions = {}
         self._cached_colors = {}
 
-        # Salva i dati di input
+        # Salva i dati di input elaborati
         with profile_section("Init Config"):
-            self.template = template_data
-            self.crossword = crossword_data
             self.grid = np.array(crossword_data['grid'])
             self.words = crossword_data['words']
+            # Nota: usiamo direttamente template_data invece di salvarlo come self.template
             self.style = template_data['style_settings']['crossword']
             self.layout = template_data['layout']
 
@@ -518,7 +606,7 @@ class CrosswordVideoGenerator:
         with profile_section("Init Text Params"):
             self.max_text_width = self.style.get('max_text_width', 500)
             self.line_spacing = self.style.get('line_spacing',
-                                               self.config_manager.config.default_line_spacing)
+                                             self.config_manager.config.default_line_spacing)
             # Inizializza i font
             self._initialize_fonts()
 
@@ -552,10 +640,42 @@ class CrosswordVideoGenerator:
             print(f"Grid size: {self.grid_width}x{self.grid_height}")
             print(f"Cell cache entries: {len(self._cell_cache)}")
             print(f"Composite cache entries: {len(self._composite_cache)}")
+            print(f"Crossword type: {self.crossword_type}")
+            if self.hidden_word_info:
+                print(f"Hidden word: {self.hidden_word_info.word}")
 
     def _get_cell_size(self) -> int:
-        """Get cell size from style settings or default configuration"""
+        """Get cell size with support for metadata override"""
+        if self.metadata.cell_size is not None:
+            return self.metadata.cell_size
         return self.style.get('cell_size', self.config_manager.config.default_cell_size)
+
+    def _process_hidden_word_highlight(self, frame: np.ndarray, word_index: int,
+                                       highlight_intersection: bool = False):
+        """Process highlighting for hidden word crosswords"""
+        if self.crossword_type != CrosswordType.HIDDEN_WORD:
+            return
+
+        word = self.words[word_index]
+        if 'intersection' not in word:
+            return
+
+        intersection = word['intersection']
+        # Highlight the intersection cell
+        if highlight_intersection:
+            cell_size = self._get_cell_size()
+            x = self.hidden_word_info.column * cell_size
+            y = word['y'] * cell_size
+
+            # Create highlight overlay
+            highlight_color = self.style.get('intersection_highlight_color',
+                                             self.style.get('highlight_color', (255, 255, 0)))
+
+            overlay = np.zeros((cell_size, cell_size, 4), dtype=np.uint8)
+            overlay[:, :, :3] = highlight_color
+            overlay[:, :, 3] = 128  # Semi-transparent
+
+            self._overlay_image(frame, overlay, (x, y))
 
     def _initialize_fonts(self):
         """Inizializza i font usando la configurazione dal template"""
@@ -787,14 +907,26 @@ class CrosswordVideoGenerator:
         return (min_x, min_y, max_x, max_y)
 
     @profile
-    def _create_grid_overlay(self, highlight_word_index: int = None, show_letters: bool = False,
-                             is_initial: bool = False, frame_number: int = None,
-                             timing: TimingInfo = None, letter_animation_config: dict = None) -> np.ndarray:
-        """Create grid overlay with optimized letter rendering"""
+    def _create_grid_overlay(self, highlight_word_index: int = None,
+                             show_letters: bool = False,
+                             is_initial: bool = False,
+                             frame_number: int = None,
+                             timing: TimingInfo = None,
+                             letter_animation_config: dict = None,
+                             show_intersections: bool = False) -> np.ndarray:
+        """
+        Create grid overlay with support for both standard and hidden word crosswords.
+        """
         cell_size = self._get_cell_size()
         grid_width = (self.bounds[2] - self.bounds[0] + 1) * cell_size
         grid_height = (self.bounds[3] - self.bounds[1] + 1) * cell_size
         overlay = np.zeros((grid_height, grid_width, 4), dtype=np.uint8)
+
+        # Determina se è un cruciverba con parola nascosta e ottiene la colonna
+        is_hidden_word = self.crossword_type == CrosswordType.HIDDEN_WORD
+        hidden_column = None
+        if is_hidden_word and self.hidden_word_info:
+            hidden_column = self.hidden_word_info.column - self.bounds[0]
 
         # Calcola le celle da evidenziare
         highlighted_cells = set()
@@ -814,7 +946,7 @@ class CrosswordVideoGenerator:
             for i, (ly, lx, _) in enumerate(current_word_letters):
                 if self._calculate_letter_visibility(frame_number, timing, i,
                                                      len(current_word_letters),
-                                                     letter_animation_config):  # Pass the config here
+                                                     letter_animation_config):
                     visible_letters.add((ly, lx))
 
         # Processa tutte le celle valide
@@ -828,21 +960,87 @@ class CrosswordVideoGenerator:
             letter = self.grid[y][x]
             is_highlighted = (y, x) in highlighted_cells
             should_show_letter = (y, x) in revealed_cells or (y, x) in visible_letters
+            is_hidden_column = is_hidden_word and (rel_x == hidden_column)
 
-            if is_initial:
-                cell = self._cell_cache['initial_6']
-                overlay[py:py + cell_size, px:px + cell_size] = cell
-            elif should_show_letter and letter != '_':
-                border_type = 'highlight' if is_highlighted else 'inactive'
-                composite_key = f'{border_type}_{letter}'
-                cell = self._composite_cache[composite_key]
-                overlay[py:py + cell_size, px:px + cell_size] = cell
+            if is_hidden_column:
+                # Usa le celle speciali per la colonna nascosta
+                if is_initial:
+                    cell = self._cell_cache['hidden_initial_6']
+                else:
+                    border_type = 'highlight' if is_highlighted else 'inactive'
+                    if should_show_letter and letter != '_':
+                        cell = self._composite_cache[f'hidden_{border_type}_{letter}']
+                    else:
+                        cell = self._cell_cache[f'hidden_{border_type}_6']
             else:
-                border_type = 'highlight' if is_highlighted else 'inactive'
-                cell = self._cell_cache[f'{border_type}_6']
+                # Usa le celle normali per il resto della griglia
+                if is_initial:
+                    cell = self._cell_cache['initial_6']
+                else:
+                    border_type = 'highlight' if is_highlighted else 'inactive'
+                    if should_show_letter and letter != '_':
+                        cell = self._composite_cache[f'{border_type}_{letter}']
+                    else:
+                        cell = self._cell_cache[f'{border_type}_6']
+
+            if cell is not None:
                 overlay[py:py + cell_size, px:px + cell_size] = cell
 
         return overlay
+
+    def _create_intersection_cell_cache(self):
+        """
+        Crea la cache per le celle di intersezione con stili specifici
+        """
+        cell_size = self._get_cell_size()
+        intersection_color = self.style.get('intersection_color', (255, 255, 0))  # Default giallo
+
+        for base_type in ['inactive', 'highlight']:
+            # Crea una nuova immagine per la cella di intersezione
+            cell_img = Image.new('RGBA', (cell_size, cell_size), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(cell_img)
+
+            # Colore del bordo base
+            border_color = {
+                'inactive': self._cached_colors['inactive'],
+                'highlight': self._cached_colors['highlight']
+            }[base_type]
+
+            # Disegna il bordo base
+            thickness = 6
+            half_thickness = thickness / 2
+            borders = [
+                half_thickness,  # left
+                half_thickness,  # top
+                cell_size - half_thickness,  # right
+                cell_size - half_thickness  # bottom
+            ]
+
+            draw.rectangle(
+                borders,
+                outline=tuple(border_color[:3]),
+                width=thickness
+            )
+
+            # Aggiungi l'evidenziazione per l'intersezione
+            padding = thickness + 2
+            inner_borders = [
+                padding,  # left
+                padding,  # top
+                cell_size - padding,  # right
+                cell_size - padding  # bottom
+            ]
+
+            # Disegna un rettangolo semi-trasparente per l'evidenziazione
+            draw.rectangle(
+                inner_borders,
+                fill=(*intersection_color, 64),  # Alpha 64 per semi-trasparenza
+                outline=None
+            )
+
+            # Salva nella cache
+            key = f'intersection_{base_type}_6'
+            self._cell_cache[key] = np.array(cell_img)
 
     def _calculate_positions(self, frame_width: int, frame_height: int) -> Dict[str, Tuple[int, int]]:
         """Calcola le posizioni degli elementi nel frame"""
@@ -1142,39 +1340,139 @@ class CrosswordVideoGenerator:
                               timing: TimingInfo,
                               frame_number: int):
         """
-        Applica una singola animazione di una parola
+        Applica una singola animazione di una parola, supportando sia cruciverba standard che hidden word.
+
+        Args:
+            frame: Il frame video da modificare
+            word_index: Indice della parola corrente
+            animation: Dizionario con i dettagli dell'animazione
+            timing: Informazioni sul timing dell'animazione
+            frame_number: Numero del frame corrente
         """
         anim_type = animation['type']
+        is_hidden_word = self.crossword_type == CrosswordType.HIDDEN_WORD
 
         if anim_type == 'show_grid_empty':
+            # Per hidden word, possiamo mostrare anche l'intersezione durante l'highlight
+            show_intersection = is_hidden_word and animation.get('show_intersection', False)
             grid_overlay = self._create_grid_overlay(
                 highlight_word_index=word_index,
                 show_letters=False,
-                is_initial=False
+                is_initial=False,
+                show_intersections=show_intersection
             )
             positions = self._calculate_positions(frame.shape[1], frame.shape[0])
             self._overlay_image(frame, grid_overlay, positions['grid'])
 
         elif anim_type == 'show_grid_word':
-            # Passa la configurazione dell'animazione dal template
+            # Configurazione animazione lettere
             letter_animation_config = animation.get('letter_animation')
+            show_intersection = is_hidden_word and animation.get('show_intersection', True)
+
+            # Per hidden word, possiamo avere animazioni speciali per l'intersezione
+            if is_hidden_word and animation.get('intersection_animation'):
+                intersection_config = animation['intersection_animation']
+                # Calcola se l'intersezione deve essere mostrata in questo frame
+                current_progress = (frame_number - timing.start_frame) / (timing.end_frame - timing.start_frame)
+                show_intersection = current_progress >= intersection_config.get('start_percentage', 0.0)
+
             grid_overlay = self._create_grid_overlay(
                 highlight_word_index=word_index,
                 show_letters=True,
                 is_initial=False,
                 frame_number=frame_number,
                 timing=timing,
-                letter_animation_config=letter_animation_config  # Nuovo parametro
+                letter_animation_config=letter_animation_config,
+                show_intersections=show_intersection
             )
             positions = self._calculate_positions(frame.shape[1], frame.shape[0])
             self._overlay_image(frame, grid_overlay, positions['grid'])
 
         elif anim_type == 'show_clue':
+            # Mostra l'indizio come nel cruciverba standard
             clue_text = self.words[word_index]['clue']
             clue_overlay, clue_size = self._create_clue_overlay(clue_text, animation)
             position = self._get_clue_position(animation, clue_size,
                                                (frame.shape[1], frame.shape[0]))
             self._overlay_image(frame, clue_overlay, position)
+
+        elif anim_type == 'highlight_intersection' and is_hidden_word:
+            # Animazione speciale solo per hidden word - evidenzia l'intersezione
+            word = self.words[word_index]
+            if 'intersection' in word:
+                intersection = word['intersection']
+                cell_size = self._get_cell_size()
+
+                # Calcola la posizione dell'intersezione
+                x = self.hidden_word_info.column * cell_size
+                y = word['y'] * cell_size
+
+                # Crea un overlay per l'evidenziazione
+                highlight_color = animation.get('highlight_color',
+                                                self.style.get('intersection_highlight_color',
+                                                               (255, 255, 0)))  # Default giallo
+
+                overlay = np.zeros((cell_size, cell_size, 4), dtype=np.uint8)
+                overlay[:, :, :3] = highlight_color
+
+                # Calcola l'opacità basata sul progresso dell'animazione
+                progress = (frame_number - timing.start_frame) / (timing.end_frame - timing.start_frame)
+                max_alpha = animation.get('max_alpha', 180)
+                min_alpha = animation.get('min_alpha', 40)
+
+                if animation.get('pulse', False):
+                    # Effetto pulsante
+                    alpha = min_alpha + (max_alpha - min_alpha) * (np.sin(progress * 2 * np.pi) + 1) / 2
+                else:
+                    # Fade in/out normale
+                    alpha = min_alpha + (max_alpha - min_alpha) * progress
+
+                overlay[:, :, 3] = int(alpha)
+
+                # Applica l'overlay
+                positions = self._calculate_positions(frame.shape[1], frame.shape[0])
+                grid_x, grid_y = positions['grid']
+                self._overlay_image(frame, overlay, (grid_x + x, grid_y + y))
+
+        elif anim_type == 'reveal_hidden_letter' and is_hidden_word:
+            # Animazione per rivelare una lettera della parola nascosta
+            word = self.words[word_index]
+            if 'intersection' in word:
+                intersection = word['intersection']
+                letter = intersection['letter']
+
+                # Crea l'overlay per la lettera
+                cell_size = self._get_cell_size()
+                cell_img = Image.new('RGBA', (cell_size, cell_size), (0, 0, 0, 0))
+                draw = ImageDraw.Draw(cell_img)
+
+                # Calcola la posizione della lettera
+                text_bbox = self.grid_font.getbbox(letter)
+                text_width = text_bbox[2] - text_bbox[0]
+                text_height = text_bbox[3] - text_bbox[1]
+
+                x = (cell_size - text_width) // 2 + self.font_config.horizontal_adjustment
+                y = (cell_size - text_height) // 2 + self.font_config.vertical_adjustment
+
+                # Calcola l'opacità basata sul progresso
+                progress = (frame_number - timing.start_frame) / (timing.end_frame - timing.start_frame)
+                alpha = int(255 * progress)
+
+                # Disegna la lettera con l'opacità calcolata
+                draw.text((x, y), letter,
+                          font=self.grid_font,
+                          fill=(*self.font_config.grid_color, alpha))
+
+                # Converti in array numpy e applica
+                letter_overlay = np.array(cell_img)
+
+                # Calcola la posizione nella griglia
+                positions = self._calculate_positions(frame.shape[1], frame.shape[0])
+                grid_x, grid_y = positions['grid']
+                x = self.hidden_word_info.column * cell_size
+                y = word['y'] * cell_size
+
+                self._overlay_image(frame, letter_overlay, (grid_x + x, grid_y + y))
 
     def _initialize_cache(self):
         """Inizializza il sistema di cache per celle e lettere"""
@@ -1189,12 +1487,17 @@ class CrosswordVideoGenerator:
 
         # Pre-calcola i colori più usati come array numpy
         self._cached_colors = {
-            'bg': np.array(bg_color + (255,), dtype=np.uint8),
-            'border': np.array(border_color + (255,), dtype=np.uint8),
-            'text': np.array(text_color + (255,), dtype=np.uint8),
-            'highlight': np.array(highlight_color + (255,), dtype=np.uint8),
-            'inactive': np.array(inactive_color + (255,), dtype=np.uint8)
+            'bg': np.array([255, 255, 255, 255], dtype=np.uint8),
+            'border': np.array([0, 0, 0, 255], dtype=np.uint8),
+            'text': np.array(self.font_config.grid_color + (255,), dtype=np.uint8),
+            'highlight': np.array(self._get_style_color('highlight_color', 'default_highlight_color') + (255,), dtype=np.uint8),
+            'inactive': np.array([128, 128, 128, 255], dtype=np.uint8),
+            'hidden_column_border': np.array([0, 0, 0, 255], dtype=np.uint8),  # Gold
+            'hidden_column_bg': np.array([0, 191, 255, 255], dtype=np.uint8)  # Deep Sky Blue
         }
+
+        # Crea cache speciale per le celle della colonna nascosta
+        self._create_hidden_column_cells(cell_size)
 
         # Crea celle base con diversi bordi e spessori
         border_types = ['initial', 'inactive', 'highlight']
@@ -1271,10 +1574,75 @@ class CrosswordVideoGenerator:
         print(f"Cache initialized with {len(self._cell_cache)} cell types and "
               f"{len(self._composite_cache)} letter combinations")
 
+    def _create_hidden_column_cells(self, cell_size: int):
+        """Crea celle speciali per la colonna nascosta con bordo oro e sfondo azzurro"""
+        thickness = 6
+        border_types = ['initial', 'inactive', 'highlight']
+
+        for border_type in border_types:
+            # Crea l'immagine base della cella
+            cell_img = Image.new('RGBA', (cell_size, cell_size), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(cell_img)
+
+            # Disegna prima il rettangolo di sfondo azzurro
+            draw.rectangle(
+                [0, 0, cell_size, cell_size],
+                fill=tuple(self._cached_colors['hidden_column_bg']),  # Sfondo azzurro
+                outline=None
+            )
+
+            # Disegna il bordo oro
+            half_thickness = thickness / 2
+            borders = [
+                half_thickness,  # left
+                half_thickness,  # top
+                cell_size - half_thickness,  # right
+                cell_size - half_thickness  # bottom
+            ]
+
+            draw.rectangle(
+                borders,
+                outline=tuple(self._cached_colors['hidden_column_border']),  # Bordo oro
+                width=thickness
+            )
+
+            # Salva nella cache con prefisso 'hidden_'
+            key = f'hidden_{border_type}_{thickness}'
+            self._cell_cache[key] = np.array(cell_img)
+
+            # Se non è una cella iniziale, prepara anche le versioni con lettere
+            if border_type != 'initial':
+                for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                    composite_img = Image.fromarray(self._cell_cache[key].copy())
+                    letter_draw = ImageDraw.Draw(composite_img)
+
+                    # Ottieni le dimensioni della lettera
+                    bbox = self.grid_font.getbbox(letter)
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
+
+                    # Calcola la posizione centrata della lettera
+                    effective_cell_size = cell_size - (thickness * 2)
+                    x_pos = (effective_cell_size - text_width) // 2 + thickness + self.font_config.horizontal_adjustment
+                    y_pos = (effective_cell_size - text_height) // 2 + thickness + self.font_config.vertical_adjustment
+
+                    # Disegna la lettera
+                    letter_draw.text(
+                        (x_pos, y_pos),
+                        letter,
+                        font=self.grid_font,
+                        fill=(*self.font_config.grid_color, 255)
+                    )
+
+                    # Salva nella cache composita
+                    composite_key = f'hidden_{border_type}_{letter}'
+                    self._composite_cache[composite_key] = np.array(composite_img)
+
     def _precalculate_animation_timings(self) -> Dict:
         """Pre-calcola i timing delle animazioni per evitare calcoli ripetuti"""
         timings = {}
-        for sequence in self.template['animation_sequence']:
+        # Usa template_data invece di template
+        for sequence in self.template_data['animation_sequence']:
             if sequence['type'] == 'initial_grid':
                 start_frame = self._seconds_to_frames(sequence['start'], self.fps)
                 end_frame = self._seconds_to_frames(sequence['end'], self.fps)
@@ -1350,7 +1718,7 @@ def main():
             required_files = {
                 'input video': file_manager.get_input_video_path('input_video.mp4'),
                 'template': file_manager.get_template_path('template.json'),
-                'crossword data': file_manager.get_data_path('crossword-data.json'),
+                'crossword data': file_manager.get_data_path('crossword-data-hidden-word.json'),
                 'font': file_manager.get_font_path('PressStart2P-Regular.ttf')
             }
 
@@ -1369,7 +1737,7 @@ def main():
             # Caricamento dati
             with profile_section("Data Loading"):
                 template_data = config_manager.load_json_file('template.json')
-                crossword_data = config_manager.load_json_file('crossword-data.json')
+                crossword_data = config_manager.load_json_file('crossword-data-hidden-word.json')
                 config_manager.validate_template(template_data)
                 config_manager.validate_crossword_data(crossword_data)
 
