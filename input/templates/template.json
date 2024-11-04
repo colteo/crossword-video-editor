@@ -103,7 +103,8 @@
             "pos_y": 100,
             "max_text_width": 800,
             "text_color": [0, 0, 0],
-            "text_align": "center"
+            "text_align": "center",
+            "text_transform": "uppercase"
           },
           {
             "type": "joke",
@@ -113,7 +114,8 @@
             "pos_y": 100,
             "max_text_width": 800,
             "text_color": [0, 0, 0],
-            "text_align": "center"
+            "text_align": "center",
+            "text_transform": "uppercase"
           }
         ]
       }
