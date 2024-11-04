@@ -1125,36 +1125,49 @@ class CrosswordVideoGenerator:
     def _process_frame_with_cached_timings(self, frame: np.ndarray,
                                            frame_number: int,
                                            animation_timings: Dict):
-        """Processa un frame usando i timing pre-calcolati"""
+        """
+        Processa un frame usando i timing pre-calcolati
+
+        Args:
+            frame: Frame video da processare
+            frame_number: Numero del frame corrente
+            animation_timings: Dictionary dei timing pre-calcolati
+        """
         # Controlla se ci sono animazioni che iniziano in questo frame
         if frame_number in animation_timings:
             animations = animation_timings[frame_number]
             if isinstance(animations, dict):  # initial_grid
-                if animations['type'] == 'initial_grid' and \
+                if animations['type'] == AnimationType.INITIAL_GRID.value and \
                         frame_number <= animations['end_frame']:
                     self._apply_initial_grid(frame)
-            else:  # word_reveal animations
+            else:  # word_reveal animations o random_phrases
                 for anim in animations:
                     if frame_number <= anim['end_frame']:
-                        timing = TimingInfo(frame_number, anim['end_frame'])
-                        self._apply_word_animation(
-                            frame, anim['word_index'],
-                            anim['data'], timing, frame_number)
+                        if anim['type'] == AnimationType.RANDOM_PHRASES.value:
+                            self._apply_random_phrase(frame, anim)
+                        elif 'word_index' in anim:  # word_reveal animations
+                            timing = TimingInfo(frame_number, anim['end_frame'])
+                            self._apply_word_animation(
+                                frame, anim['word_index'],
+                                anim['data'], timing, frame_number)
 
         # Controlla le animazioni in corso
         for start_frame, animations in animation_timings.items():
             if start_frame < frame_number:
                 if isinstance(animations, dict):  # initial_grid
-                    if animations['type'] == 'initial_grid' and \
+                    if animations['type'] == AnimationType.INITIAL_GRID.value and \
                             frame_number <= animations['end_frame']:
                         self._apply_initial_grid(frame)
-                else:  # word_reveal animations
+                else:  # word_reveal animations o random_phrases
                     for anim in animations:
                         if frame_number <= anim['end_frame']:
-                            timing = TimingInfo(start_frame, anim['end_frame'])
-                            self._apply_word_animation(
-                                frame, anim['word_index'],
-                                anim['data'], timing, frame_number)
+                            if anim['type'] == AnimationType.RANDOM_PHRASES.value:
+                                self._apply_random_phrase(frame, anim)
+                            elif 'word_index' in anim:  # word_reveal animations
+                                timing = TimingInfo(start_frame, anim['end_frame'])
+                                self._apply_word_animation(
+                                    frame, anim['word_index'],
+                                    anim['data'], timing, frame_number)
 
     def _get_letter_adjustments(self) -> Tuple[int, int]:
         """Ottiene gli aggiustamenti di posizionamento delle lettere dalla configurazione"""
@@ -1162,3 +1175,37 @@ class CrosswordVideoGenerator:
         vertical_adj = grid_font_config.get('vertical_adjustment', -2)
         horizontal_adj = grid_font_config.get('horizontal_adjustment', 0)
         return horizontal_adj, vertical_adj
+
+    def _apply_random_phrase(self, frame: np.ndarray, animation: Dict):
+        """
+        Applica l'animazione della frase random al frame.
+
+        Args:
+            frame: Frame video corrente
+            animation: Dizionario contenente i dettagli dell'animazione
+        """
+        phrase_text = animation['phrase_text']
+        style = animation['style']
+
+        # Crea l'overlay del testo usando il metodo esistente per gli indizi
+        # ma con le impostazioni specifiche per le frasi
+        phrase_overlay, phrase_size = self._create_clue_overlay(
+            phrase_text,
+            {
+                'max_text_width': style['max_text_width'],
+                'text_color': style['text_color'],
+                'text_align': style['text_align'],
+                'padding': 20,
+                'line_spacing': self.line_spacing
+            }
+        )
+
+        # Calcola la posizione della frase
+        position = self._get_clue_position(
+            style,
+            phrase_size,
+            (frame.shape[1], frame.shape[0])
+        )
+
+        # Applica l'overlay al frame
+        self._overlay_image(frame, phrase_overlay, position)

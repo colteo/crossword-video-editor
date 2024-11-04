@@ -3,6 +3,9 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
 from src.types.crossword_types import TimingInfo
+from src.utils.file_manager import FileManager
+import json
+import random
 
 
 class AnimationType(Enum):
@@ -11,7 +14,15 @@ class AnimationType(Enum):
     SHOW_GRID_EMPTY = "show_grid_empty"
     SHOW_GRID_WORD = "show_grid_word"
     SHOW_CLUE = "show_clue"
+    RANDOM_PHRASES = "random_phrases"
 
+@dataclass
+class PhraseAnimation:
+    """Manages animations related to random phrases"""
+    phrase_type: str
+    phrase_text: str
+    timing: TimingInfo
+    style: Dict
 
 @dataclass
 class WordAnimation:
@@ -23,15 +34,11 @@ class WordAnimation:
 class AnimationManager:
     """Manages animation sequences and timing calculations"""
 
-    def __init__(self, fps: int):
-        """
-        Initialize animation manager.
-
-        Args:
-            fps: Frames per second of the video
-        """
+    def __init__(self, fps: int, file_manager: Optional[FileManager] = None):
         self.fps = fps
+        self.file_manager = file_manager or FileManager()
         self._cached_timings: Optional[Dict] = None
+        self._cached_phrases: Optional[Dict[str, List[str]]] = None
 
     def calculate_animation_timings(self, template_data: Dict) -> Dict:
         """
@@ -53,6 +60,33 @@ class AnimationManager:
                     'type': AnimationType.INITIAL_GRID.value,
                     'end_frame': end_frame
                 }
+            elif sequence['type'] == AnimationType.RANDOM_PHRASES.value:
+                # Gestione delle frasi random
+                for phrase_config in sequence['settings']['phrases_to_show']:
+                    start_frame = self._seconds_to_frames(phrase_config['start'])
+                    end_frame = self._seconds_to_frames(phrase_config['end'])
+
+                    # Seleziona una frase random del tipo specificato
+                    phrase_text = self.get_random_phrase(
+                        phrase_config['type'],
+                        sequence['settings'].get('data_file', 'phrases.json')
+                    )
+
+                    if start_frame not in timings:
+                        timings[start_frame] = []
+
+                    timings[start_frame].append({
+                        'type': AnimationType.RANDOM_PHRASES.value,
+                        'end_frame': end_frame,
+                        'phrase_text': phrase_text,
+                        'style': {
+                            'pos_x': phrase_config.get('pos_x', 'center'),
+                            'pos_y': phrase_config.get('pos_y', 100),
+                            'max_text_width': phrase_config.get('max_text_width', 800),
+                            'text_color': phrase_config.get('text_color', [0, 0, 0]),
+                            'text_align': phrase_config.get('text_align', 'center')
+                        }
+                    })
             elif sequence['type'] == 'word_reveal':
                 for word_data in sequence['sequence']:
                     word_index = word_data['word_index']
@@ -210,3 +244,32 @@ class AnimationManager:
     def reset_cache(self):
         """Clear cached animation timings"""
         self._cached_timings = None
+
+    def _load_phrases(self, filename: str) -> Dict[str, List[str]]:
+        """Load and cache phrases from JSON file"""
+        if self._cached_phrases is None:
+            try:
+                file_path = self.file_manager.get_data_path(filename)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                # Organizziamo le frasi per tipo
+                phrases_by_type = {}
+                for phrase_data in data['phrases']:
+                    phrase_type = phrase_data['type']
+                    if phrase_type not in phrases_by_type:
+                        phrases_by_type[phrase_type] = []
+                    phrases_by_type[phrase_type].append(phrase_data['phrase'])
+
+                self._cached_phrases = phrases_by_type
+            except Exception as e:
+                raise Exception(f"Error loading phrases from {filename}: {str(e)}")
+
+        return self._cached_phrases
+
+    def get_random_phrase(self, phrase_type: str, filename: str = "phrases.json") -> str:
+        """Get a random phrase of specified type"""
+        phrases = self._load_phrases(filename)
+        if phrase_type not in phrases:
+            raise ValueError(f"Invalid phrase type: {phrase_type}")
+        return random.choice(phrases[phrase_type])

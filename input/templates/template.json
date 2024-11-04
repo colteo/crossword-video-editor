@@ -85,6 +85,33 @@
           ]
         }
       ]
+    },
+    {
+      "type": "random_phrases",
+      "settings": {
+        "phrases_to_show": [
+          {
+            "type": "social",
+            "start": 3.6,
+            "end": 6.6,
+            "pos_x": "center",
+            "pos_y": 100,
+            "max_text_width": 800,
+            "text_color": [0, 0, 0],
+            "text_align": "center"
+          },
+          {
+            "type": "joke",
+            "start": 6.6,
+            "end": 9.6,
+            "pos_x": "center",
+            "pos_y": 100,
+            "max_text_width": 800,
+            "text_color": [0, 0, 0],
+            "text_align": "center"
+          }
+        ]
+      }
     }
   ],
   "style_settings": {
