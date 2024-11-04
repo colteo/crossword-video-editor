@@ -89,6 +89,11 @@
     {
       "type": "random_phrases",
       "settings": {
+        "highlight_words": {
+          "follow": [255, 0, 0],
+          "subscribe": [0, 128, 0],
+          "share": [0, 0, 255]
+        },
         "phrases_to_show": [
           {
             "type": "social",

@@ -61,12 +61,13 @@ class AnimationManager:
                     'end_frame': end_frame
                 }
             elif sequence['type'] == AnimationType.RANDOM_PHRASES.value:
-                # Gestione delle frasi random
+                # Ottieni la configurazione dei colori di evidenziazione
+                highlight_colors = sequence['settings'].get('highlight_words', {})
+
                 for phrase_config in sequence['settings']['phrases_to_show']:
                     start_frame = self._seconds_to_frames(phrase_config['start'])
                     end_frame = self._seconds_to_frames(phrase_config['end'])
 
-                    # Seleziona una frase random del tipo specificato
                     phrase_text = self.get_random_phrase(
                         phrase_config['type'],
                         sequence['settings'].get('data_file', 'phrases.json')
@@ -79,6 +80,7 @@ class AnimationManager:
                         'type': AnimationType.RANDOM_PHRASES.value,
                         'end_frame': end_frame,
                         'phrase_text': phrase_text,
+                        'highlight_colors': highlight_colors,  # Aggiungi i colori
                         'style': {
                             'pos_x': phrase_config.get('pos_x', 'center'),
                             'pos_y': phrase_config.get('pos_y', 100),

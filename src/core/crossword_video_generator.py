@@ -1178,18 +1178,16 @@ class CrosswordVideoGenerator:
 
     def _apply_random_phrase(self, frame: np.ndarray, animation: Dict):
         """
-        Applica l'animazione della frase random al frame.
-
-        Args:
-            frame: Frame video corrente
-            animation: Dizionario contenente i dettagli dell'animazione
+        Applica l'animazione della frase random al frame con parole evidenziate.
         """
         phrase_text = animation['phrase_text']
         style = animation['style']
 
-        # Crea l'overlay del testo usando il metodo esistente per gli indizi
-        # ma con le impostazioni specifiche per le frasi
-        phrase_overlay, phrase_size = self._create_clue_overlay(
+        # Ottieni i colori di evidenziazione dal template
+        highlight_colors = animation.get('highlight_colors', {})
+
+        # Usa il nuovo metodo per creare l'overlay con parole evidenziate
+        phrase_overlay, phrase_size = self._create_highlighted_text_overlay(
             phrase_text,
             {
                 'max_text_width': style['max_text_width'],
@@ -1197,7 +1195,8 @@ class CrosswordVideoGenerator:
                 'text_align': style['text_align'],
                 'padding': 20,
                 'line_spacing': self.line_spacing
-            }
+            },
+            highlight_colors
         )
 
         # Calcola la posizione della frase
@@ -1209,3 +1208,93 @@ class CrosswordVideoGenerator:
 
         # Applica l'overlay al frame
         self._overlay_image(frame, phrase_overlay, position)
+
+    def _create_highlighted_text_overlay(self, text: str, pattern: Dict,
+                                         highlight_colors: Dict[str, Tuple[int, int, int]]) -> Tuple[
+        np.ndarray, Tuple[int, int]]:
+        """
+        Crea l'overlay per il testo con parole chiave evidenziate usando colori configurabili
+
+        Args:
+            text: Testo da renderizzare
+            pattern: Dictionary con le impostazioni di stile e posizionamento
+            highlight_colors: Dictionary che mappa parole chiave ai loro colori RGB
+
+        Returns:
+            Tuple[np.ndarray, Tuple[int, int]]: Overlay del testo e le sue dimensioni
+        """
+        # Impostazioni di base
+        padding = pattern.get('padding', 20)
+        max_width = pattern.get('max_text_width', self.max_text_width)
+        line_spacing = pattern.get('line_spacing', self.line_spacing)
+        default_color = pattern.get('text_color', (0, 0, 0))
+        text_align = pattern.get('text_align', 'left')
+
+        # Crea un'immagine temporanea per misurare il testo
+        temp_img = Image.new('RGBA', (max_width + padding * 2, 1000), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(temp_img)
+
+        # Divide il testo in parole
+        words = text.split()
+        lines = []
+        current_line = []
+        current_width = 0
+        line_words_info = []  # Lista di tuple (parola, colore) per ogni linea
+
+        # Elabora le parole e gestisce il wrapping
+        for word in words:
+            word_width = draw.textlength(word, font=self.clue_font)
+            space_width = draw.textlength(" ", font=self.clue_font)
+
+            # Determina il colore della parola
+            word_color = highlight_colors.get(word.lower(), default_color)
+
+            if current_width + word_width <= max_width:
+                current_line.append(word)
+                line_words_info.append((word, word_color))
+                current_width += word_width + space_width
+            else:
+                if current_line:
+                    lines.append(line_words_info)
+                current_line = [word]
+                line_words_info = [(word, word_color)]
+                current_width = word_width + space_width
+
+        if current_line:
+            lines.append(line_words_info)
+
+        # Calcola l'altezza totale necessaria
+        line_height = self._get_font_height(self.clue_font)
+        total_height = len(lines) * line_height * line_spacing
+
+        # Crea l'immagine finale
+        img = Image.new('RGBA',
+                        (max_width + padding * 2, int(total_height) + padding * 2),
+                        (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+
+        # Disegna il testo linea per linea
+        y = padding
+        for line_info in lines:
+            # Calcola la larghezza totale della linea per l'allineamento
+            line_width = sum(draw.textlength(word, font=self.clue_font) +
+                             draw.textlength(" ", font=self.clue_font)
+                             for word, _ in line_info[:-1])
+            line_width += draw.textlength(line_info[-1][0], font=self.clue_font)  # Ultima parola senza spazio
+
+            # Calcola la posizione x iniziale in base all'allineamento
+            if text_align == 'center':
+                x = (max_width - line_width) / 2 + padding
+            elif text_align == 'right':
+                x = max_width - line_width + padding
+            else:  # 'left' o qualsiasi altro valore
+                x = padding
+
+            # Disegna ogni parola con il suo colore
+            for word, color in line_info:
+                draw.text((x, y), word, font=self.clue_font, fill=(*color, 255))
+                x += draw.textlength(word, font=self.clue_font) + draw.textlength(" ", font=self.clue_font)
+
+            y += line_height * line_spacing
+
+        return np.array(img), img.size
