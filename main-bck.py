@@ -4,26 +4,526 @@ from typing import Dict, List, Tuple, Set
 from enum import Enum, auto
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
+from dataclasses import dataclass
 from typing import Optional, Dict, Any
 import json
+import time
+import functools
+from contextlib import contextmanager
 from typing import Dict, Optional
+import statistics
 import os
 from pathlib import Path
 import shutil
-from src.utils.profiler import profiler, profile, profile_section
-from src.utils.file_manager import FileManager
-from src.types.crossword_types import (
-    CrosswordType,
-    HiddenWordInfo,
-    WordIntersection,
-    CrosswordMetadata,
-    CrosswordConfig,
-    FontConfig,
-    TimingInfo
-)
-from src.config.config_manager import ConfigManager
-from src.font.font_manager import FontManager
-from src.animation.animation_manager import AnimationManager, AnimationType, WordAnimation
+import tempfile
+import uuid
+from datetime import datetime
+
+class CrosswordType(Enum):
+    STANDARD = "standard"
+    HIDDEN_WORD = "hidden_word"
+
+@dataclass
+class HiddenWordInfo:
+    word: str
+    column: int
+
+@dataclass
+class WordIntersection:
+    position: int
+    letter: str
+
+@dataclass
+class CrosswordMetadata:
+    guid: Optional[str] = None
+    timestamp: Optional[str] = None
+    grid_size: Optional[int] = None
+    cell_size: Optional[int] = None
+    crossword_type: CrosswordType = CrosswordType.STANDARD
+
+
+class FileManager:
+    """Gestisce i percorsi dei file e le cartelle del progetto"""
+
+    def __init__(self, base_dir: str = None):
+        """
+        Inizializza il gestore dei file
+
+        Args:
+            base_dir: Directory base del progetto. Se None, usa la directory corrente.
+        """
+        self.base_dir = Path(base_dir) if base_dir else Path.cwd()
+
+        # Definisce le cartelle principali
+        self.input_dir = self.base_dir / 'input'
+        self.output_dir = self.base_dir / 'output'
+
+        # Sottocartelle della directory input
+        self.video_input_dir = self.input_dir / 'videos'
+        self.templates_dir = self.input_dir / 'templates'
+        self.data_dir = self.input_dir / 'data'
+        self.fonts_dir = self.input_dir / 'fonts'
+
+        # Crea le cartelle se non esistono
+        self._create_directories()
+
+        # Directory temporanea
+        self.temp_dir = None
+
+    def generate_output_filename(self,
+                                 crossword_type: str,
+                                 template_type: str,
+                                 extension: str = "mp4",
+                                 add_guid: bool = False) -> str:
+        """
+        Genera un nome file per il video di output usando il formato specificato.
+
+        Args:
+            crossword_type: Tipo del cruciverba
+            template_type: Tipo del template
+            extension: Estensione del file (default: mp4)
+            add_guid: Se True, aggiunge un GUID al nome del file
+
+        Returns:
+            str: Nome del file formattato
+        """
+        # Genera la data corrente nel formato YYYYMMDD
+        current_date = datetime.now().strftime("%Y%m%d")
+
+        # Pulisce i nomi dei tipi mantenendo il nome completo
+        clean_crossword_type = self._clean_type_name(crossword_type)
+        clean_template_type = self._clean_type_name(template_type)
+
+        # Costruisce il nome base del file
+        filename_parts = [
+            current_date,
+            clean_crossword_type,
+            clean_template_type
+        ]
+
+        # Aggiunge un GUID se richiesto
+        if add_guid:
+            guid = str(uuid.uuid4())[:8]  # Usa solo i primi 8 caratteri del GUID
+            filename_parts.append(guid)
+
+        # Unisce le parti con underscore e aggiunge l'estensione
+        return f"{'_'.join(filename_parts)}.{extension}"
+
+    def _clean_type_name(self, type_name: str) -> str:
+        """
+        Pulisce il nome del tipo mantenendo il nome completo.
+        Rimuove solo i caratteri non validi per i nomi file.
+
+        Args:
+            type_name: Nome del tipo da pulire
+
+        Returns:
+            str: Nome pulito
+        """
+        # Sostituisce eventuali caratteri non validi per i nomi file con underscore
+        import re
+        # Rimuove caratteri non validi per i nomi file, mantenendo lettere, numeri,
+        # trattini, underscore e spazi
+        clean_name = re.sub(r'[^\w\-\s]', '', type_name)
+
+        # Sostituisce spazi multipli con singolo underscore
+        clean_name = re.sub(r'\s+', '_', clean_name.strip())
+
+        return clean_name
+
+    def _create_directories(self):
+        """Crea le cartelle necessarie se non esistono"""
+        directories = [
+            self.input_dir,
+            self.output_dir,
+            self.video_input_dir,
+            self.templates_dir,
+            self.data_dir,
+            self.fonts_dir
+        ]
+
+        for directory in directories:
+            directory.mkdir(parents=True, exist_ok=True)
+
+    def create_temp_dir(self) -> Path:
+        """Crea una directory temporanea"""
+        if self.temp_dir is None:
+            self.temp_dir = Path(tempfile.mkdtemp(dir=self.output_dir))
+        return self.temp_dir
+
+    def get_temp_file_path(self, filename: str) -> Path:
+        """Ottiene il percorso per un file temporaneo"""
+        if self.temp_dir is None:
+            self.create_temp_dir()
+        return self.temp_dir / filename
+
+    def get_input_video_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un video di input"""
+        return self.video_input_dir / filename
+
+    def get_output_video_path(self, template_data: dict, crossword_data: dict,
+                              add_guid: bool = False) -> Path:
+        """
+        Genera il percorso completo per il file video di output basato sui dati forniti.
+
+        Args:
+            template_data: Dati del template
+            crossword_data: Dati del cruciverba
+            add_guid: Se True, aggiunge un GUID al nome del file
+
+        Returns:
+            Path: Percorso completo del file di output
+        """
+        filename = self.generate_output_filename(
+            crossword_type=crossword_data.get('crossword_type', 'unknown'),
+            template_type=template_data.get('template_type', 'unknown'),
+            add_guid=add_guid
+        )
+        return self.output_dir / filename
+
+    def get_template_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un file template"""
+        return self.templates_dir / filename
+
+    def get_data_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un file di dati"""
+        return self.data_dir / filename
+
+    def get_font_path(self, filename: str) -> Path:
+        """Restituisce il percorso completo per un file font"""
+        return self.fonts_dir / filename
+
+    def ensure_temp_dir(self) -> Path:
+        """Crea e restituisce il percorso della cartella temporanea"""
+        temp_dir = self.output_dir / 'temp'
+        temp_dir.mkdir(exist_ok=True)
+        return temp_dir
+
+    def cleanup_temp_files(self):
+        """Pulisce i file temporanei in modo sicuro"""
+        if self.temp_dir and self.temp_dir.exists():
+            try:
+                shutil.rmtree(str(self.temp_dir))
+                self.temp_dir = None
+            except Exception as e:
+                print(f"Warning: Error cleaning temporary files: {e}")
+
+
+class SimpleProfiler:
+    """Simple profiler to track execution times"""
+
+    def __init__(self):
+        self.times: Dict[str, list] = {}
+
+    def add_time(self, name: str, elapsed: float):
+        """Add execution time for a specific section"""
+        if name not in self.times:
+            self.times[name] = []
+        self.times[name].append(elapsed)
+
+    def get_stats(self) -> Dict[str, Dict[str, float]]:
+        """Get statistics for all tracked sections"""
+        stats = {}
+        for name, times in self.times.items():
+            if times:
+                stats[name] = {
+                    'avg': statistics.mean(times),
+                    'min': min(times),
+                    'max': max(times),
+                    'total': sum(times),
+                    'calls': len(times)
+                }
+        return stats
+
+    def print_stats(self):
+        """Print formatted statistics"""
+        stats = self.get_stats()
+        if not stats:
+            print("No profiling data available")
+            return
+
+        print("\n=== Profiling Results ===")
+        # Find longest name for formatting
+        max_name = max(len(name) for name in stats.keys())
+
+        # Print header
+        header = f"{'Section':<{max_name}} | {'Avg (ms)':>10} | {'Min (ms)':>10} | {'Max (ms)':>10} | {'Total (s)':>10} | {'Calls':>8}"
+        print(header)
+        print("-" * len(header))
+
+        # Print each section's stats
+        for name, data in sorted(stats.items()):
+            print(f"{name:<{max_name}} | {data['avg'] * 1000:10.2f} | {data['min'] * 1000:10.2f} | "
+                  f"{data['max'] * 1000:10.2f} | {data['total']:10.2f} | {data['calls']:8d}")
+
+
+# Create a global profiler instance
+profiler = SimpleProfiler()
+
+
+def profile(func=None, section_name: Optional[str] = None):
+    """Decorator to profile function execution time"""
+    if func is None:
+        return lambda f: profile(f, section_name)
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        name = section_name or func.__name__
+        start_time = time.perf_counter()
+        try:
+            result = func(*args, **kwargs)
+            return result
+        finally:
+            elapsed = time.perf_counter() - start_time
+            profiler.add_time(name, elapsed)
+
+    return wrapper
+
+
+@contextmanager
+def profile_section(name: str):
+    """Context manager to profile a code section"""
+    start_time = time.perf_counter()
+    try:
+        yield
+    finally:
+        elapsed = time.perf_counter() - start_time
+        profiler.add_time(name, elapsed)
+
+@dataclass
+class CrosswordConfig:
+    """Configuration settings for crossword video generation"""
+    font_path: Optional[str] = None
+    default_cell_size: int = 75
+    default_line_spacing: float = 1.5
+    default_clue_distance: int = 100
+
+    # Font settings
+    clue_font_size: int = 20
+    grid_font_size: int = 46
+
+    # Colors (RGB)
+    default_text_color: tuple = (0, 0, 0)
+    default_border_color: tuple = (0, 0, 0)
+    default_background_color: tuple = (255, 255, 255)
+    default_highlight_color: tuple = (0, 255, 0)
+
+class ConfigManager:
+    """Manages configuration loading and validation for crossword video generation"""
+
+    def __init__(self, config: Optional[CrosswordConfig] = None, file_manager: Optional[FileManager] = None):
+        self.config = config or CrosswordConfig()
+        self.file_manager = file_manager or FileManager()
+
+    def load_json_file(self, filename: str) -> Dict[str, Any]:
+        """Load and validate a JSON file"""
+        try:
+            # Determina il tipo di file e usa il percorso appropriato
+            if filename.startswith('template'):
+                path = self.file_manager.get_template_path(filename)
+            else:
+                path = self.file_manager.get_data_path(filename)
+
+            if not path.exists():
+                raise FileNotFoundError(f"File not found: {path}")
+
+            with path.open('r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data
+
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in {path}: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Error loading {path}: {str(e)}")
+
+    def validate_crossword_data(self, data: Dict[str, Any]) -> bool:
+        """Validate crossword data structure for both standard and hidden word types"""
+        # Check if metadata exists to determine crossword type
+        if 'metadata' in data and data['metadata'].get('type') == 'hidden_word':
+            return self._validate_hidden_word_crossword(data)
+        return self._validate_standard_crossword(data)
+
+    def _validate_hidden_word_crossword(self, data: Dict[str, Any]) -> bool:
+        """Validate hidden word crossword structure"""
+        # Validate required sections
+        required_sections = ['metadata', 'hidden_word', 'grid', 'words']
+        if not all(section in data for section in required_sections):
+            missing = [s for s in required_sections if s not in data]
+            raise ValueError(f"Missing required sections in hidden word crossword: {missing}")
+
+        # Validate metadata
+        required_metadata = ['guid', 'timestamp', 'grid_size', 'cell_size', 'type']
+        metadata = data['metadata']
+        if not all(field in metadata for field in required_metadata):
+            missing = [f for f in required_metadata if f not in metadata]
+            raise ValueError(f"Missing required metadata fields: {missing}")
+
+        # Validate hidden word data
+        hidden_word = data['hidden_word']
+        if not all(field in hidden_word for field in ['word', 'column']):
+            raise ValueError("Hidden word data must contain 'word' and 'column'")
+
+        # Validate grid
+        if not isinstance(data['grid'], list) or not all(isinstance(row, list) for row in data['grid']):
+            raise ValueError("Grid must be a 2D array")
+
+        # Validate words and intersections
+        for word in data['words']:
+            required_word_fields = ['text', 'x', 'y', 'is_horizontal', 'clue', 'intersection']
+            if not all(field in word for field in required_word_fields):
+                raise ValueError(f"Word missing required fields: {word}")
+
+            # Validate intersection data
+            intersection = word['intersection']
+            if not all(field in intersection for field in ['position', 'letter']):
+                raise ValueError(f"Invalid intersection data in word: {word}")
+
+        return True
+
+    def _validate_standard_crossword(self, data: Dict[str, Any]) -> bool:
+        """Validate standard crossword structure"""
+        required_fields = ['grid', 'words']
+
+        if not all(field in data for field in required_fields):
+            missing = [f for f in required_fields if f not in data]
+            raise ValueError(f"Missing required fields in crossword data: {missing}")
+
+        # Validate grid
+        if not isinstance(data['grid'], list) or not all(isinstance(row, list) for row in data['grid']):
+            raise ValueError("Grid must be a 2D array")
+
+        # Validate words
+        for word in data['words']:
+            required_word_fields = ['text', 'x', 'y', 'is_horizontal', 'clue']
+            if not all(field in word for field in required_word_fields):
+                raise ValueError(f"Word missing required fields: {word}")
+
+        return True
+
+    def validate_template(self, data: Dict[str, Any]) -> bool:
+        """Validate template structure"""
+        required_fields = ['template_type', 'animation_sequence', 'style_settings']
+
+        if not all(field in data for field in required_fields):
+            missing = [f for f in required_fields if f not in data]
+            raise ValueError(f"Missing required fields in template: {missing}")
+
+        # Validate animation sequence
+        if not isinstance(data['animation_sequence'], list):
+            raise ValueError("Animation sequence must be a list")
+
+        return True
+
+    def update_config(self, **kwargs):
+        """Update configuration settings"""
+        for key, value in kwargs.items():
+            if hasattr(self.config, key):
+                setattr(self.config, key, value)
+            else:
+                raise ValueError(f"Unknown configuration parameter: {key}")
+
+    def get_font_path(self) -> Optional[str]:
+        """Get font path with validation"""
+        if self.config.font_path:
+            path = Path(self.config.font_path)
+            if not path.exists():
+                print(f"Warning: Font file not found at {self.config.font_path}")
+                return None
+            return str(path)
+        return None
+
+    def update_font_path(self):
+        """Aggiorna il percorso del font nella configurazione"""
+        if self.config.font_path:
+            font_filename = Path(self.config.font_path).name
+            self.config.font_path = str(self.file_manager.get_font_path(font_filename))
+
+class AnimationType(Enum):
+    INITIAL_GRID = "initial_grid"
+    SHOW_GRID_EMPTY = "show_grid_empty"
+    SHOW_GRID_WORD = "show_grid_word"
+    SHOW_CLUE = "show_clue"
+
+class WordAnimation:
+    """Classe per gestire le animazioni relative a una parola specifica"""
+    def __init__(self, word_index: int, animations: List[Dict]):
+        self.word_index = word_index
+        self.animations = animations
+
+@dataclass
+class TimingInfo:
+    """Classe per gestire le informazioni di timing"""
+    start_frame: int
+    end_frame: int
+
+
+@dataclass
+class FontConfig:
+    """Configurazione per un font"""
+    file_path: str
+    clue_size: int
+    clue_color: Tuple[int, int, int]
+    grid_size: int
+    grid_color: Tuple[int, int, int]
+    vertical_adjustment: int
+    horizontal_adjustment: int
+
+    @classmethod
+    def from_template(cls, font_settings: Dict[str, Any], file_path: str) -> 'FontConfig':
+        """Crea una configurazione font dal template"""
+        settings = font_settings['settings']
+        return cls(
+            file_path=file_path,
+            clue_size=settings['clue']['size'],
+            clue_color=tuple(settings['clue']['color']),
+            grid_size=settings['grid']['size'],
+            grid_color=tuple(settings['grid']['color']),
+            vertical_adjustment=settings['grid'].get('vertical_adjustment', 0),
+            horizontal_adjustment=settings['grid'].get('horizontal_adjustment', 0)
+        )
+
+
+class FontManager:
+    """Gestisce il caricamento e la configurazione dei font"""
+
+    def __init__(self, file_manager: FileManager):
+        self.file_manager = file_manager
+        self.current_font: Optional[FontConfig] = None
+
+    def load_font_config(self, template_data: Dict[str, Any]) -> FontConfig:
+        """Carica la configurazione del font dal template"""
+        if 'fonts' not in template_data:
+            raise ValueError("Font configuration not found in template")
+
+        fonts_config = template_data['fonts']
+        main_font = fonts_config.get('main')
+
+        if not main_font or 'file' not in main_font:
+            # Se non è specificato un font principale, usa il fallback
+            fallback = fonts_config.get('fallback', 'Arial')
+            return self._create_default_config(fallback)
+
+        # Controlla che il file del font esista
+        font_path = self.file_manager.get_font_path(main_font['file'])
+        if not font_path.exists():
+            print(f"Warning: Font file {font_path} not found, using fallback font")
+            return self._create_default_config(fonts_config.get('fallback', 'Arial'))
+
+        # Crea la configurazione dal template
+        return FontConfig.from_template(main_font, str(font_path))
+
+    def _create_default_config(self, font_name: str) -> FontConfig:
+        """Crea una configurazione di default per il font specificato"""
+        return FontConfig(
+            file_path=font_name,  # Per font di sistema, usa solo il nome
+            clue_size=24,
+            clue_color=(0, 0, 0),
+            grid_size=46,
+            grid_color=(0, 0, 0),
+            vertical_adjustment=0,
+            horizontal_adjustment=0
+        )
+
 
 class CrosswordVideoGenerator:
     @profile
@@ -605,10 +1105,6 @@ class CrosswordVideoGenerator:
                 self.width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 self.fps = int(cap.get(cv2.CAP_PROP_FPS))
-
-                # Inizializza animation manager qui, dopo aver impostato fps
-                self.animation_manager = AnimationManager(self.fps)
-
                 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
                 # Prepara il file di output temporaneo
@@ -771,15 +1267,39 @@ class CrosswordVideoGenerator:
                                      letter_index: int, total_letters: int,
                                      animation_config: dict = None) -> bool:
         """
-        Determina se una lettera deve essere visibile basandosi sull'AnimationManager
+        Determina se una lettera deve essere visibile in base alla configurazione dell'animazione
         """
-        return self.animation_manager.calculate_letter_visibility(
-            frame_number=frame_number,
-            timing=timing,
-            letter_index=letter_index,
-            total_letters=total_letters,
-            animation_config=animation_config
-        )
+        total_duration = timing.end_frame - timing.start_frame
+
+        # Usa configurazione default se non specificata
+        if not animation_config:
+            animation_config = {
+                "type": "sequential",
+                "time_percentage": 100
+            }
+
+        animation_type = animation_config.get('type', 'sequential')
+
+        if animation_type == 'sequential':
+            time_percentage = animation_config.get('time_percentage', 100) / 100
+            frames_per_letter = (total_duration * time_percentage) / total_letters
+            letter_appears_at = timing.start_frame + (letter_index * frames_per_letter)
+
+        elif animation_type == 'fixed_delay':
+            delay_frames = animation_config.get('delay_frames', 3)
+            letter_appears_at = timing.start_frame + (letter_index * delay_frames)
+
+        elif animation_type == 'groups':
+            group_size = animation_config.get('group_size', 2)
+            time_percentage = animation_config.get('time_percentage', 30) / 100
+            group_index = letter_index // group_size
+            frames_per_group = total_duration * time_percentage / ((total_letters + group_size - 1) // group_size)
+            letter_appears_at = timing.start_frame + (group_index * frames_per_group)
+
+        elif animation_type == 'instant':
+            letter_appears_at = timing.start_frame
+
+        return frame_number >= letter_appears_at
 
     def _apply_initial_grid(self, frame: np.ndarray):
         """
@@ -1120,7 +1640,31 @@ class CrosswordVideoGenerator:
 
     def _precalculate_animation_timings(self) -> Dict:
         """Pre-calcola i timing delle animazioni per evitare calcoli ripetuti"""
-        return self.animation_manager.calculate_animation_timings(self.template_data)
+        timings = {}
+        # Usa template_data invece di template
+        for sequence in self.template_data['animation_sequence']:
+            if sequence['type'] == 'initial_grid':
+                start_frame = self._seconds_to_frames(sequence['start'], self.fps)
+                end_frame = self._seconds_to_frames(sequence['end'], self.fps)
+                timings[start_frame] = {
+                    'type': 'initial_grid',
+                    'end_frame': end_frame
+                }
+            elif sequence['type'] == 'word_reveal':
+                for word_data in sequence['sequence']:
+                    word_index = word_data['word_index']
+                    for anim in word_data['animations']:
+                        start_frame = self._seconds_to_frames(anim['start'], self.fps)
+                        end_frame = self._seconds_to_frames(anim['end'], self.fps)
+                        if start_frame not in timings:
+                            timings[start_frame] = []
+                        timings[start_frame].append({
+                            'type': anim['type'],
+                            'word_index': word_index,
+                            'end_frame': end_frame,
+                            'data': anim
+                        })
+        return timings
 
     def _process_frame_with_cached_timings(self, frame: np.ndarray,
                                            frame_number: int,
