@@ -9,9 +9,14 @@ import json
 app = Flask(__name__)
 
 # File configurations centralized at the top of the file
+# FILE_PATHS = {
+#     'input video': 'input_video_sviluppo_10sec.mp4',
+#     'template': 'template-sviluppo.json',
+#     'font': 'PressStart2P-Regular.ttf'
+# }
 FILE_PATHS = {
-    'input video': 'input_video_sviluppo_10sec.mp4',
-    'template': 'template-sviluppo.json',
+    'input video': 'input_video_long.mp4',
+    'template': 'template.json',
     'font': 'PressStart2P-Regular.ttf'
 }
 

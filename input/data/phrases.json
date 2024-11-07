@@ -159,6 +159,18 @@
         {
             "type": "intro",
             "phrase": "Think you have what it takes? Let’s see!"
+        },
+        {
+            "type": "outro",
+            "phrase": "It’s time to show off your expertise!"
+        },
+        {
+            "type": "outro",
+            "phrase": "Let’s test your skills – are you ready?"
+        },
+        {
+            "type": "outro",
+            "phrase": "Think you have what it takes? Let’s see!"
         }
     ]
 }

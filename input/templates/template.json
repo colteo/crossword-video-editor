@@ -93,7 +93,12 @@
                 0,
                 0
               ],
-              "text_align": "center"
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
             },
             {
               "type": "show_grid_word",
@@ -126,7 +131,12 @@
                 0,
                 0
               ],
-              "text_align": "center"
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
             },
             {
               "type": "show_grid_word",
@@ -159,7 +169,12 @@
                 0,
                 0
               ],
-              "text_align": "center"
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
             },
             {
               "type": "show_grid_word",
@@ -192,7 +207,12 @@
                 0,
                 0
               ],
-              "text_align": "center"
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
             },
             {
               "type": "show_grid_word",
@@ -211,38 +231,96 @@
       "type": "random_phrases",
       "settings": {
         "highlight_words": {
-          "follow": [255, 0, 0],
-          "subscribe": [0, 128, 0],
-          "share": [0, 0, 255]
+          "follow": [
+            255,
+            0,
+            0
+          ],
+          "subscribe": [
+            0,
+            128,
+            0
+          ],
+          "share": [
+            0,
+            0,
+            255
+          ]
         },
         "phrases_to_show": [
           {
-            "type": "social",
-            "start": 3.6,
-            "end": 6.6,
-            "pos_x": "center",
-            "pos_y": 100,
-            "max_text_width": 800,
-            "text_color": [
-              0,
-              0,
-              0
-            ],
+            "type": "intro",
+            "start": 6.1,
+            "end": 8.0,
+            "pos_x": 410,
+            "pos_y": 1380,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
             "text_align": "center",
-            "text_transform": "uppercase",
-            "animation": {
-              "type": "word_by_word",
-              "word_delay": 0.2,
-              "fade_duration": 0.1
-            }
+            "text_transform": "uppercase"
           },
           {
             "type": "joke",
-            "start": 6.6,
-            "end": 9.6,
-            "pos_x": "center",
-            "pos_y": 100,
-            "max_text_width": 800,
+            "start": 16.0,
+            "end": 17.9,
+            "pos_x": 410,
+            "pos_y": 1380,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "social",
+            "start": 25.6,
+            "end": 27.4,
+            "pos_x": 410,
+            "pos_y": 1380,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "joke",
+            "start": 35.3,
+            "end": 37.2,
+            "pos_x": 410,
+            "pos_y": 1380,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "social",
+            "start": 45.1,
+            "end": 46.8,
+            "pos_x": 410,
+            "pos_y": 1380,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "social",
+            "start": 54.7,
+            "end": 56.6,
+            "pos_x": 410,
+            "pos_y": 1380,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "outro",
+            "start": 57.6,
+            "end": 60.0,
+            "pos_x": 157,
+            "pos_y": 448,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
             "text_transform": "uppercase"
