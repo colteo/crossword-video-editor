@@ -544,9 +544,17 @@ class CrosswordVideoGenerator:
 
     def _calculate_positions(self, frame_width: int, frame_height: int) -> Dict[str, Tuple[int, int]]:
         """Calcola le posizioni degli elementi nel frame"""
-        # Calcola la posizione centrale per il cruciverba
+        # Posizione orizzontale sempre centrata
         grid_x = (frame_width - self.grid_width) // 2
-        grid_y = (frame_height - self.grid_height) // 2
+
+        # Leggi la posizione verticale dal layout
+        position = self.layout.get('crossword_position', {})
+        if isinstance(position, dict):
+            # Supporto per posizionamento verticale specifico
+            grid_y = position.get('y', (frame_height - self.grid_height) // 2)
+        else:
+            # Fallback al centro se è ancora stringa "center" o altro valore non valido
+            grid_y = (frame_height - self.grid_height) // 2
 
         return {
             'grid': (grid_x, grid_y)
