@@ -1717,7 +1717,7 @@ def main():
             # Verifica che i file necessari esistano
             required_files = {
                 'input video': file_manager.get_input_video_path('input_video_short.mp4'),
-                'template': file_manager.get_template_path('template.json'),
+                'template': file_manager.get_template_path('template-a.json'),
                 'crossword data': file_manager.get_data_path('crossword-data-hidden-word.json'),
                 'font': file_manager.get_font_path('PressStart2P-Regular.ttf')
             }
@@ -1736,7 +1736,7 @@ def main():
 
             # Caricamento dati
             with profile_section("Data Loading"):
-                template_data = config_manager.load_json_file('template.json')
+                template_data = config_manager.load_json_file('template-a.json')
                 crossword_data = config_manager.load_json_file('crossword-data-hidden-word.json')
                 config_manager.validate_template(template_data)
                 config_manager.validate_crossword_data(crossword_data)

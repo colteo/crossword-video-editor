@@ -8,16 +8,30 @@ import json
 
 app = Flask(__name__)
 
+# Costante per il template path
+TEMPLATE_FILE = 'template-a.json'
+
+def get_template_config(template_path):
+    try:
+        with open(template_path, 'r') as f:
+            template_data = json.load(f)
+            return {
+                'font': template_data['fonts']['main']['file'],
+                'input_video': template_data['input_video']
+            }
+    except Exception as e:
+        # Fallback ai valori precedenti in caso di errore
+        return {
+            'font': 'PressStart2P-Regular.ttf',
+            'input_video': 'input_video_long.mp4'
+        }
+
 # File configurations centralized at the top of the file
-# FILE_PATHS = {
-#     'input video': 'input_video_sviluppo_10sec.mp4',
-#     'template': 'template-sviluppo.json',
-#     'font': 'PressStart2P-Regular.ttf'
-# }
+template_config = get_template_config(TEMPLATE_FILE)
 FILE_PATHS = {
-    'input video': 'input_video_long.mp4',
-    'template': 'template.json',
-    'font': 'PressStart2P-Regular.ttf'
+    'input video': template_config['input_video'],
+    'template': TEMPLATE_FILE,
+    'font': template_config['font']
 }
 
 def generate_video(crossword_data):
