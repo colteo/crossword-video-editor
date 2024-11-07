@@ -79,28 +79,40 @@
       "type": "random_phrases",
       "settings": {
         "highlight_words": {
-          "follow": [255, 0, 0],
-          "subscribe": [0, 128, 0],
-          "share": [0, 0, 255]
+          "follow": [
+            255,
+            0,
+            0
+          ],
+          "subscribe": [
+            0,
+            128,
+            0
+          ],
+          "share": [
+            0,
+            0,
+            255
+          ]
         },
         "phrases_to_show": [
-      {
-        "type": "social",
-        "start": 3.6,
-        "end": 6.6,
-        "pos_x": "center",
-        "pos_y": 100,
-        "max_text_width": 800,
-        "text_color": [0, 0, 0],
-        "text_align": "center",
-        "text_transform": "uppercase",
-        "animation": {
-          "type": "word_by_word",
-          "word_delay": 0.2,
-          "fade_duration": 0.1
-        }
-      }
-    ]
+          {
+            "type": "social",
+            "start": 3.6,
+            "end": 6.6,
+            "pos_x": "center",
+            "pos_y": 100,
+            "max_text_width": 800,
+            "text_color": [
+              0,
+              0,
+              0
+            ],
+            "text_align": "center",
+            "text_transform": "uppercase",
+            "font_size": 60
+          }
+        ]
       }
     }
   ],

@@ -60,10 +60,10 @@ class AnimationManager:
                     'type': AnimationType.INITIAL_GRID.value,
                     'end_frame': end_frame
                 }
+
             elif sequence['type'] == AnimationType.RANDOM_PHRASES.value:
                 settings = sequence['settings']
                 highlight_colors = settings.get('highlight_words', {})
-                # Ottieni la trasformazione del testo globale
                 global_transform = settings.get('text_transform', 'none')
 
                 for phrase_config in settings['phrases_to_show']:
@@ -78,29 +78,36 @@ class AnimationManager:
                     if start_frame not in timings:
                         timings[start_frame] = []
 
-                    timings[start_frame].append({
+                    animation_config = {
                         'type': AnimationType.RANDOM_PHRASES.value,
                         'end_frame': end_frame,
                         'phrase_text': phrase_text,
                         'highlight_colors': highlight_colors,
-                        'text_transform': global_transform,  # Trasformazione globale
+                        'text_transform': global_transform,
+                        'font_size': phrase_config.get('font_size'),  # Preserva il font size dalla configurazione
                         'style': {
                             'pos_x': phrase_config.get('pos_x', 'center'),
                             'pos_y': phrase_config.get('pos_y', 100),
                             'max_text_width': phrase_config.get('max_text_width', 800),
                             'text_color': phrase_config.get('text_color', [0, 0, 0]),
                             'text_align': phrase_config.get('text_align', 'center'),
-                            'text_transform': phrase_config.get('text_transform')  # Trasformazione specifica
+                            'text_transform': phrase_config.get('text_transform'),
+                            'font_size': phrase_config.get('font_size')  # Aggiungi anche nello stile
                         }
-                    })
+                    }
+
+                    timings[start_frame].append(animation_config)
+
             elif sequence['type'] == 'word_reveal':
                 for word_data in sequence['sequence']:
                     word_index = word_data['word_index']
                     for anim in word_data['animations']:
                         start_frame = self._seconds_to_frames(anim['start'])
                         end_frame = self._seconds_to_frames(anim['end'])
+
                         if start_frame not in timings:
                             timings[start_frame] = []
+
                         timings[start_frame].append({
                             'type': anim['type'],
                             'word_index': word_index,

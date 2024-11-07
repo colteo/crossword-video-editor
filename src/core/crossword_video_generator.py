@@ -1238,13 +1238,12 @@ class CrosswordVideoGenerator:
         """
         phrase_text = animation['phrase_text']
         style = animation['style']
-        # Ottieni i colori di evidenziazione dal livello corretto della configurazione
+        # Ottieni i colori di evidenziazione
         highlight_colors = animation.get('highlight_colors', {})
 
-        # Ottieni la trasformazione del testo, prima dalla configurazione specifica
-        # della frase, poi dalle impostazioni globali
-        text_transform = style.get('text_transform',
-                                   animation.get('text_transform', 'none'))
+        # Ottieni il font size specifico dallo stile dell'animazione
+        if 'font_size' in animation:
+            style['font_size'] = animation['font_size']
 
         phrase_overlay, phrase_size = self._create_highlighted_text_overlay(
             phrase_text,
@@ -1254,7 +1253,8 @@ class CrosswordVideoGenerator:
                 'text_align': style['text_align'],
                 'padding': 20,
                 'line_spacing': self.line_spacing,
-                'text_transform': text_transform
+                'text_transform': style.get('text_transform', 'none'),
+                'font_size': style.get('font_size')  # Assicurati che il font_size venga passato qui
             },
             highlight_colors
         )
@@ -1272,6 +1272,14 @@ class CrosswordVideoGenerator:
         np.ndarray, Tuple[int, int]]:
         """
         Crea l'overlay per il testo con parole chiave evidenziate e trasformazione
+
+        Args:
+            text: Testo da renderizzare
+            pattern: Dictionary con le impostazioni di stile e posizionamento
+            highlight_colors: Dictionary con i colori per le parole da evidenziare
+
+        Returns:
+            Tuple[np.ndarray, Tuple[int, int]]: L'overlay del testo e le sue dimensioni
         """
         # Applica la trasformazione del testo
         text_transform = pattern.get('text_transform', 'none')
@@ -1281,7 +1289,6 @@ class CrosswordVideoGenerator:
         transformed_colors = {}
         for word, color in highlight_colors.items():
             transformed_word = self._transform_text(word, text_transform)
-            # Assicurati che il colore sia una tupla di tre interi
             if isinstance(color, (list, tuple)) and len(color) == 3:
                 transformed_colors[transformed_word] = tuple(int(c) for c in color)
 
@@ -1291,6 +1298,18 @@ class CrosswordVideoGenerator:
         line_spacing = pattern.get('line_spacing', self.line_spacing)
         default_color = tuple(pattern.get('text_color', (0, 0, 0)))
         text_align = pattern.get('text_align', 'left')
+
+        # Usa il font size specifico della frase se presente, altrimenti usa quello default delle random phrases
+        font_size = pattern.get('font_size', self.font_config.random_phrases_size)
+
+        try:
+            custom_font = ImageFont.truetype(
+                self.font_config.file_path,
+                font_size
+            )
+        except Exception as e:
+            print(f"Warning: Could not load custom font size {font_size}, using default font")
+            custom_font = self.clue_font
 
         # Crea un'immagine temporanea per misurare il testo
         temp_img = Image.new('RGBA', (max_width + padding * 2, 1000), (0, 0, 0, 0))
@@ -1305,11 +1324,10 @@ class CrosswordVideoGenerator:
 
         # Processa ogni parola
         for word in words:
-            word_width = draw.textlength(word, font=self.clue_font)
-            space_width = draw.textlength(" ", font=self.clue_font)
+            word_width = draw.textlength(word, font=custom_font)
+            space_width = draw.textlength(" ", font=custom_font)
 
             # Cerca il colore della parola nel dizionario trasformato
-            # Se la parola esatta non viene trovata, cerca una corrispondenza case-insensitive
             word_color = None
             word_lower = word.lower()
             for key, color in transformed_colors.items():
@@ -1337,8 +1355,8 @@ class CrosswordVideoGenerator:
         if current_line:
             lines.append(line_words_info)
 
-        # Calcola l'altezza totale necessaria
-        line_height = self._get_font_height(self.clue_font)
+        # Calcola l'altezza totale necessaria usando il font personalizzato
+        line_height = self._get_font_height(custom_font)
         total_height = len(lines) * line_height * line_spacing
 
         # Crea l'immagine finale
@@ -1350,8 +1368,8 @@ class CrosswordVideoGenerator:
         # Disegna il testo con i colori appropriati
         y = padding
         for line_info in lines:
-            line_width = sum(draw.textlength(word, font=self.clue_font) +
-                             (draw.textlength(" ", font=self.clue_font) if i < len(line_info) - 1 else 0)
+            line_width = sum(draw.textlength(word, font=custom_font) +
+                             (draw.textlength(" ", font=custom_font) if i < len(line_info) - 1 else 0)
                              for i, (word, _) in enumerate(line_info))
 
             # Calcola la posizione x iniziale in base all'allineamento
@@ -1364,10 +1382,13 @@ class CrosswordVideoGenerator:
 
             # Disegna ogni parola con il suo colore
             for i, (word, color) in enumerate(line_info):
-                draw.text((x, y), word, font=self.clue_font, fill=(*color, 255))
-                x += draw.textlength(word, font=self.clue_font)
+                # Debug print per verificare i valori
+                print(f"Drawing word: {word}, Color: {color}, Font size: {font_size}, Position: ({x}, {y})")
+
+                draw.text((x, y), word, font=custom_font, fill=(*color, 255))
+                x += draw.textlength(word, font=custom_font)
                 if i < len(line_info) - 1:
-                    x += draw.textlength(" ", font=self.clue_font)
+                    x += draw.textlength(" ", font=custom_font)
 
             y += line_height * line_spacing
 

@@ -21,6 +21,10 @@
           ],
           "vertical_adjustment": 4,
           "horizontal_adjustment": 2
+        },
+        "random_phrases": {
+          "size": 34,
+          "color": [0, 0, 0]
         }
       }
     },
@@ -320,10 +324,11 @@
             "end": 60.0,
             "pos_x": 157,
             "pos_y": 448,
-            "max_text_width": 495,
+            "max_text_width": 690,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "text_transform": "uppercase"
+            "text_transform": "uppercase",
+            "font_size": 52
           }
         ]
       }

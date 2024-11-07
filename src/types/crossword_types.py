@@ -54,6 +54,8 @@ class FontConfig:
     clue_color: Tuple[int, int, int]
     grid_size: int
     grid_color: Tuple[int, int, int]
+    random_phrases_size: int  # Nuovo campo
+    random_phrases_color: Tuple[int, int, int]  # Nuovo campo
     vertical_adjustment: int
     horizontal_adjustment: int
 
@@ -61,12 +63,20 @@ class FontConfig:
     def from_template(cls, font_settings: dict, file_path: str) -> 'FontConfig':
         """Create a FontConfig instance from template data"""
         settings = font_settings['settings']
+
+        # Get random phrases settings if available, otherwise use clue settings
+        random_phrases = settings.get('random_phrases', {})
+        random_phrases_size = random_phrases.get('size', settings['clue']['size'])
+        random_phrases_color = tuple(random_phrases.get('color', settings['clue']['color']))
+
         return cls(
             file_path=file_path,
             clue_size=settings['clue']['size'],
             clue_color=tuple(settings['clue']['color']),
             grid_size=settings['grid']['size'],
             grid_color=tuple(settings['grid']['color']),
+            random_phrases_size=random_phrases_size,  # Nuovo campo
+            random_phrases_color=random_phrases_color,  # Nuovo campo
             vertical_adjustment=settings['grid'].get('vertical_adjustment', 0),
             horizontal_adjustment=settings['grid'].get('horizontal_adjustment', 0)
         )
