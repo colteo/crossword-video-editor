@@ -1238,6 +1238,7 @@ class CrosswordVideoGenerator:
         """
         phrase_text = animation['phrase_text']
         style = animation['style']
+        # Ottieni i colori di evidenziazione dal livello corretto della configurazione
         highlight_colors = animation.get('highlight_colors', {})
 
         # Ottieni la trasformazione del testo, prima dalla configurazione specifica
@@ -1253,7 +1254,7 @@ class CrosswordVideoGenerator:
                 'text_align': style['text_align'],
                 'padding': 20,
                 'line_spacing': self.line_spacing,
-                'text_transform': text_transform  # Passa la trasformazione
+                'text_transform': text_transform
             },
             highlight_colors
         )
@@ -1271,30 +1272,24 @@ class CrosswordVideoGenerator:
         np.ndarray, Tuple[int, int]]:
         """
         Crea l'overlay per il testo con parole chiave evidenziate e trasformazione
-
-        Args:
-            text: Testo da renderizzare
-            pattern: Dictionary con le impostazioni di stile e posizionamento
-            highlight_colors: Dictionary che mappa parole chiave ai loro colori RGB
-
-        Returns:
-            Tuple[np.ndarray, Tuple[int, int]]: Overlay del testo e le sue dimensioni
         """
         # Applica la trasformazione del testo
         text_transform = pattern.get('text_transform', 'none')
         text = self._transform_text(text, text_transform)
 
-        # Converti anche le chiavi dei colori secondo la trasformazione
+        # Converti le chiavi dei colori secondo la trasformazione
         transformed_colors = {}
         for word, color in highlight_colors.items():
             transformed_word = self._transform_text(word, text_transform)
-            transformed_colors[transformed_word] = tuple(color)  # Converte liste in tuple
+            # Assicurati che il colore sia una tupla di tre interi
+            if isinstance(color, (list, tuple)) and len(color) == 3:
+                transformed_colors[transformed_word] = tuple(int(c) for c in color)
 
         # Impostazioni di base per il rendering
         padding = pattern.get('padding', 20)
         max_width = pattern.get('max_text_width', self.max_text_width)
         line_spacing = pattern.get('line_spacing', self.line_spacing)
-        default_color = tuple(pattern.get('text_color', (0, 0, 0)))  # Converte in tuple
+        default_color = tuple(pattern.get('text_color', (0, 0, 0)))
         text_align = pattern.get('text_align', 'left')
 
         # Crea un'immagine temporanea per misurare il testo
@@ -1306,38 +1301,39 @@ class CrosswordVideoGenerator:
         lines = []
         current_line = []
         current_width = 0
-        line_words_info = []  # Lista di tuple (parola, colore) per ogni linea
+        line_words_info = []
 
         # Processa ogni parola
         for word in words:
-            # Calcola le dimensioni della parola e dello spazio
             word_width = draw.textlength(word, font=self.clue_font)
             space_width = draw.textlength(" ", font=self.clue_font)
 
-            # Determina il colore della parola
-            # Cerca la parola nel dizionario dei colori, usa il colore default se non trovata
-            word_color = transformed_colors.get(word, default_color)
+            # Cerca il colore della parola nel dizionario trasformato
+            # Se la parola esatta non viene trovata, cerca una corrispondenza case-insensitive
+            word_color = None
+            word_lower = word.lower()
+            for key, color in transformed_colors.items():
+                if key.lower() == word_lower:
+                    word_color = color
+                    break
+            if word_color is None:
+                word_color = default_color
 
-            # Controlla se la parola entra nella linea corrente
             if current_width + word_width <= max_width:
-                # La parola entra nella linea corrente
                 current_line.append(word)
                 line_words_info.append((word, word_color))
                 current_width += word_width + space_width
             else:
-                # La parola non entra: salva la linea corrente e inizia una nuova
                 if current_line:
                     lines.append(line_words_info)
                     current_line = [word]
                     line_words_info = [(word, word_color)]
                     current_width = word_width + space_width
                 else:
-                    # Se la parola è più lunga della larghezza massima, forzala su una linea
                     current_line = [word]
                     line_words_info = [(word, word_color)]
                     current_width = word_width + space_width
 
-        # Aggiungi l'ultima linea se presente
         if current_line:
             lines.append(line_words_info)
 
@@ -1345,16 +1341,15 @@ class CrosswordVideoGenerator:
         line_height = self._get_font_height(self.clue_font)
         total_height = len(lines) * line_height * line_spacing
 
-        # Crea l'immagine finale con le dimensioni calcolate
+        # Crea l'immagine finale
         img = Image.new('RGBA',
                         (max_width + padding * 2, int(total_height) + padding * 2),
                         (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        # Disegna il testo linea per linea
+        # Disegna il testo con i colori appropriati
         y = padding
         for line_info in lines:
-            # Calcola la larghezza totale della linea per l'allineamento
             line_width = sum(draw.textlength(word, font=self.clue_font) +
                              (draw.textlength(" ", font=self.clue_font) if i < len(line_info) - 1 else 0)
                              for i, (word, _) in enumerate(line_info))
@@ -1367,22 +1362,15 @@ class CrosswordVideoGenerator:
             else:  # 'left' o qualsiasi altro valore
                 x = padding
 
-            # Disegna ogni parola della linea con il suo colore
+            # Disegna ogni parola con il suo colore
             for i, (word, color) in enumerate(line_info):
-                # Disegna la parola
                 draw.text((x, y), word, font=self.clue_font, fill=(*color, 255))
-
-                # Aggiorna la posizione x per la prossima parola
                 x += draw.textlength(word, font=self.clue_font)
-
-                # Aggiungi spazio dopo la parola, ma non dopo l'ultima parola della linea
                 if i < len(line_info) - 1:
                     x += draw.textlength(" ", font=self.clue_font)
 
-            # Passa alla linea successiva
             y += line_height * line_spacing
 
-        # Converti l'immagine PIL in array numpy e restituisci anche le dimensioni
         return np.array(img), img.size
 
     def _transform_text(self, text: str, transform_type: str) -> str:

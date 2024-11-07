@@ -93,6 +93,7 @@
         "max_text_width": 800,
         "text_color": [0, 0, 0],
         "text_align": "center",
+        "text_transform": "uppercase",
         "animation": {
           "type": "word_by_word",
           "word_delay": 0.2,
