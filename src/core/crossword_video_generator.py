@@ -1308,7 +1308,6 @@ class CrosswordVideoGenerator:
                 font_size
             )
         except Exception as e:
-            print(f"Warning: Could not load custom font size {font_size}, using default font")
             custom_font = self.clue_font
 
         # Crea un'immagine temporanea per misurare il testo
