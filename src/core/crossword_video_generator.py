@@ -218,16 +218,19 @@ class CrosswordVideoGenerator:
         bbox = font.getbbox("Aj")  # Usa lettere alte e basse per ottenere l'altezza completa
         return bbox[3] - bbox[1]
 
-    def _create_clue_overlay(self, clue_text: str, pattern: Dict) -> Tuple[np.ndarray, Tuple[int, int]]:
+    def _create_clue_overlay(self, clue_text: str, pattern: Dict) -> Tuple[np.ndarray, Tuple[int, int], List[Dict]]:
         """
-        Crea l'overlay per l'indizio usando PIL per il rendering del font
+        Crea l'overlay per l'indizio usando PIL per il rendering del font con supporto per animazione word-by-word
 
         Args:
             clue_text: Testo dell'indizio
             pattern: Dictionary con le impostazioni di stile e posizionamento
 
         Returns:
-            Tuple[np.ndarray, Tuple[int, int]]: Overlay dell'indizio e le sue dimensioni
+            Tuple[np.ndarray, Tuple[int, int], List[Dict]]:
+            - Overlay dell'indizio
+            - Dimensioni dell'overlay
+            - Lista di dizionari con info sulle parole {word, pos, size, color}
         """
         # Converti il testo in maiuscolo
         clue_text = clue_text.upper()
@@ -251,6 +254,7 @@ class CrosswordVideoGenerator:
         lines = []
         current_line = []
         current_width = 0
+        line_words_info = []
 
         for word in words:
             word_width = draw.textlength(word, font=self.clue_font)
@@ -258,15 +262,21 @@ class CrosswordVideoGenerator:
 
             if current_width + word_width <= max_width:
                 current_line.append(word)
+                line_words_info.append((word, text_color))
                 current_width += word_width + space_width
             else:
                 if current_line:
-                    lines.append(" ".join(current_line))
-                current_line = [word]
-                current_width = word_width + space_width
+                    lines.append(line_words_info)
+                    current_line = [word]
+                    line_words_info = [(word, text_color)]
+                    current_width = word_width + space_width
+                else:
+                    current_line = [word]
+                    line_words_info = [(word, text_color)]
+                    current_width = word_width + space_width
 
         if current_line:
-            lines.append(" ".join(current_line))
+            lines.append(line_words_info)
 
         # Calcola l'altezza totale necessaria
         line_height = self._get_font_height(self.clue_font)
@@ -274,16 +284,22 @@ class CrosswordVideoGenerator:
 
         # Crea l'immagine finale con le dimensioni corrette
         img = Image.new('RGBA',
-                        (max_width + padding * 2,
-                         int(total_height) + padding * 2),
+                        (max_width + padding * 2, int(total_height) + padding * 2),
                         (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        # Disegna il testo con l'allineamento specificato
+        # Lista per tenere traccia delle informazioni sulle parole
+        words_info = []
+
+        # Disegna il testo linea per linea
         y = padding
-        for line in lines:
+        for line_words_info in lines:
+            # Calcola la larghezza totale della linea per l'allineamento
+            line_width = sum(draw.textlength(word, font=self.clue_font) +
+                             (draw.textlength(" ", font=self.clue_font) if i < len(line_words_info) - 1 else 0)
+                             for i, (word, _) in enumerate(line_words_info))
+
             # Calcola la posizione x in base all'allineamento
-            line_width = draw.textlength(line, font=self.clue_font)
             if text_align == 'center':
                 x = (max_width - line_width) / 2 + padding
             elif text_align == 'right':
@@ -291,15 +307,35 @@ class CrosswordVideoGenerator:
             else:  # 'left' o qualsiasi altro valore
                 x = padding
 
-            draw.text((x, y), line,
-                      font=self.clue_font,
-                      fill=(*text_color, 255))
+            # Disegna ogni parola della linea con il suo colore
+            for i, (word, color) in enumerate(line_words_info):
+                # Calcola dimensioni parola
+                word_width = draw.textlength(word, font=self.clue_font)
+                word_height = self._get_font_height(self.clue_font)
+
+                # Salva info sulla parola
+                words_info.append({
+                    'word': word,
+                    'pos': (int(x), int(y)),
+                    'size': (int(word_width), int(word_height)),
+                    'color': color
+                })
+
+                # Disegna la parola
+                draw.text((x, y), word, font=self.clue_font, fill=(*color, 255))
+
+                # Aggiorna la posizione x per la prossima parola
+                x += word_width
+
+                # Aggiungi spazio dopo la parola, ma non dopo l'ultima parola della linea
+                if i < len(line_words_info) - 1:
+                    x += draw.textlength(" ", font=self.clue_font)
+
+            # Passa alla linea successiva
             y += line_height * line_spacing
 
-        # Converti l'immagine PIL in array numpy per OpenCV
-        overlay = np.array(img)
-
-        return overlay, img.size
+        # Converti l'immagine PIL in array numpy e restituisci anche le dimensioni e le info sulle parole
+        return np.array(img), img.size, words_info
 
     def _get_clue_position(self, pattern: Dict, clue_size: Tuple[int, int], frame_size: Tuple[int, int]) -> Tuple[int, int]:
         """
@@ -876,12 +912,24 @@ class CrosswordVideoGenerator:
             positions = self._calculate_positions(frame.shape[1], frame.shape[0])
             self._overlay_image(frame, grid_overlay, positions['grid'])
 
+
         elif anim_type == 'show_clue':
-            # Mostra l'indizio come nel cruciverba standard
+
+            # Mostra l'indizio con animazione
             clue_text = self.words[word_index]['clue']
-            clue_overlay, clue_size = self._create_clue_overlay(clue_text, animation)
-            position = self._get_clue_position(animation, clue_size,
-                                               (frame.shape[1], frame.shape[0]))
+            clue_overlay, clue_size, words_info = self._create_clue_overlay(clue_text, animation)
+
+            # Se c'è una configurazione di animazione
+            if 'animation' in animation and animation['animation'].get('type') == 'word_by_word':
+                clue_overlay = self._apply_word_by_word_animation(
+                    clue_overlay,
+                    words_info,
+                    frame_number,
+                    timing,
+                    animation['animation']
+                )
+
+            position = self._get_clue_position(animation, clue_size, (frame.shape[1], frame.shape[0]))
             self._overlay_image(frame, clue_overlay, position)
 
         elif anim_type == 'highlight_intersection' and is_hidden_word:
@@ -1353,3 +1401,57 @@ class CrosswordVideoGenerator:
         elif transform_type == 'lowercase':
             return text.lower()
         return text  # 'none' o qualsiasi altro valore
+
+    def _apply_word_by_word_animation(self,
+                                      overlay: np.ndarray,
+                                      words_info: List[Dict],
+                                      frame_number: int,
+                                      timing: TimingInfo,
+                                      config: Dict) -> np.ndarray:
+        """
+        Anima le parole una alla volta con fade in
+
+        Args:
+            overlay: L'overlay completo dell'indizio
+            words_info: Lista di info sulle parole
+            frame_number: Frame corrente
+            timing: Timing dell'animazione
+            config: Configurazione animazione
+        """
+        # Crea un overlay vuoto con lo stesso formato
+        result = np.zeros_like(overlay)
+
+        # Calcola parametri temporali
+        total_duration = timing.end_frame - timing.start_frame
+        word_delay_frames = int(config.get('word_delay', 0.2) * self.fps)
+        fade_duration_frames = int(config.get('fade_duration', 0.1) * self.fps)
+
+        # Per ogni parola
+        for i, word_info in enumerate(words_info):
+            # Calcola quando la parola dovrebbe iniziare ad apparire
+            word_start_frame = timing.start_frame + (i * word_delay_frames)
+            word_end_frame = word_start_frame + fade_duration_frames
+
+            if frame_number < word_start_frame:
+                # La parola non deve ancora apparire
+                continue
+
+            if frame_number >= word_end_frame:
+                # La parola deve essere completamente visibile
+                alpha = 1.0
+            else:
+                # La parola sta facendo fade in
+                alpha = (frame_number - word_start_frame) / fade_duration_frames
+
+            # Estrai la regione della parola dall'overlay originale
+            x, y = word_info['pos']
+            w, h = word_info['size']
+            word_region = overlay[y:y + h, x:x + w].copy()
+
+            # Applica l'alpha
+            word_region[:, :, 3] = (word_region[:, :, 3] * alpha).astype(np.uint8)
+
+            # Copia la regione nell'overlay risultante
+            result[y:y + h, x:x + w] = word_region
+
+        return result

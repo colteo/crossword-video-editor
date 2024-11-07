@@ -1,0 +1,136 @@
+{
+  "template_type": "template_type-a",
+  "fonts": {
+    "main": {
+      "file": "PressStart2P-Regular.ttf",
+      "settings": {
+        "clue": {
+          "size": 28,
+          "color": [
+            0,
+            0,
+            0
+          ]
+        },
+        "grid": {
+          "size": 46,
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "vertical_adjustment": 4,
+          "horizontal_adjustment": 2
+        }
+      }
+    },
+    "fallback": "Arial"
+  },
+  "animation_sequence": [
+    {
+      "type": "initial_grid",
+      "start": 1.0,
+      "end": 2.0
+    },
+    {
+      "type": "word_reveal",
+      "sequence": [
+        {
+          "word_index": 0,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 2.0,
+              "end": 5.0
+            },
+            {
+              "type": "show_clue",
+              "start": 2.0,
+              "end": 5.0,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [
+                0,
+                0,
+                0
+              ],
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
+            },
+            {
+              "type": "show_grid_word",
+              "start": 5.0,
+              "end": 8.0,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "random_phrases",
+      "settings": {
+        "highlight_words": {
+          "follow": [255, 0, 0],
+          "subscribe": [0, 128, 0],
+          "share": [0, 0, 255]
+        },
+        "phrases_to_show": [
+      {
+        "type": "social",
+        "start": 3.6,
+        "end": 6.6,
+        "pos_x": "center",
+        "pos_y": 100,
+        "max_text_width": 800,
+        "text_color": [0, 0, 0],
+        "text_align": "center",
+        "animation": {
+          "type": "word_by_word",
+          "word_delay": 0.2,
+          "fade_duration": 0.1
+        }
+      }
+    ]
+      }
+    }
+  ],
+  "style_settings": {
+    "crossword": {
+      "cell_size": 75,
+      "border_color": [
+        0,
+        0,
+        0
+      ],
+      "background_color": [
+        255,
+        255,
+        255
+      ],
+      "highlight_color": [
+        0,
+        255,
+        0
+      ],
+      "text_color": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "layout": {
+    "crossword_position": {
+      "y": 300
+    }
+  }
+}

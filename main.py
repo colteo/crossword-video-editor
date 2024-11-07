@@ -16,8 +16,8 @@ def generate_video(crossword_data):
 
             # Verifica che i file necessari esistano
             required_files = {
-                'input video': file_manager.get_input_video_path('input_video_long.mp4'),
-                'template': file_manager.get_template_path('template.json'),
+                'input video': file_manager.get_input_video_path('input_video_sviluppo_10sec.mp4'),
+                'template': file_manager.get_template_path('template-sviluppo.json'),
                 'font': file_manager.get_font_path('PressStart2P-Regular.ttf')
             }
 
@@ -35,7 +35,7 @@ def generate_video(crossword_data):
 
             # Caricamento e validazione del template
             with profile_section("Data Loading"):
-                template_data = config_manager.load_json_file('template.json')
+                template_data = config_manager.load_json_file('template-sviluppo.json')
                 config_manager.validate_template(template_data)
                 config_manager.validate_crossword_data(crossword_data)
 
@@ -49,7 +49,7 @@ def generate_video(crossword_data):
                 )
 
                 # Processa il video con il nuovo nome file
-                generator.process_video('input_video_long.mp4')
+                generator.process_video('input_video_sviluppo_10sec.mp4')
 
         profiler.print_stats()
         return {"status": "success", "message": "Video generated successfully"}
