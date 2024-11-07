@@ -1382,9 +1382,6 @@ class CrosswordVideoGenerator:
 
             # Disegna ogni parola con il suo colore
             for i, (word, color) in enumerate(line_info):
-                # Debug print per verificare i valori
-                print(f"Drawing word: {word}, Color: {color}, Font size: {font_size}, Position: ({x}, {y})")
-
                 draw.text((x, y), word, font=custom_font, fill=(*color, 255))
                 x += draw.textlength(word, font=custom_font)
                 if i < len(line_info) - 1:
