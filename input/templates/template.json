@@ -257,7 +257,7 @@
             "start": 6.1,
             "end": 8.0,
             "pos_x": 410,
-            "pos_y": 1380,
+            "pos_y": 1360,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
@@ -268,7 +268,7 @@
             "start": 16.0,
             "end": 17.9,
             "pos_x": 410,
-            "pos_y": 1380,
+            "pos_y": 1360,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
@@ -279,7 +279,7 @@
             "start": 25.6,
             "end": 27.4,
             "pos_x": 410,
-            "pos_y": 1380,
+            "pos_y": 1360,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
@@ -290,7 +290,7 @@
             "start": 35.3,
             "end": 37.2,
             "pos_x": 410,
-            "pos_y": 1380,
+            "pos_y": 1360,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
@@ -301,7 +301,7 @@
             "start": 45.1,
             "end": 46.8,
             "pos_x": 410,
-            "pos_y": 1380,
+            "pos_y": 1360,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
@@ -312,7 +312,7 @@
             "start": 54.7,
             "end": 56.6,
             "pos_x": 410,
-            "pos_y": 1380,
+            "pos_y": 1360,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
@@ -361,7 +361,7 @@
   },
   "layout": {
     "crossword_position": {
-      "y": 300
+      "y": 400
     }
   }
 }
