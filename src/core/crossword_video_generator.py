@@ -342,8 +342,8 @@ class CrosswordVideoGenerator:
                 # Assicura che l'indizio non esca dal frame
                 y = max(0, min(y, frame_height - clue_height))
             except (ValueError, TypeError):
-                # Fallback: posiziona vicino al fondo del frame
-                y = frame_height - clue_height - self.layout.get('clue_distance_from_bottom', 100)
+                # Fallback al centro se c'è un errore
+                y = (frame_height - clue_height) // 2
 
         return (x, y)
 
