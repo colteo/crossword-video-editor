@@ -21,8 +21,8 @@
   "animation_sequence": [
     {
       "type": "initial_grid",
-      "start": 0.5,
-      "end": 3.6
+      "start": 5.1,
+      "end": 8.2
     },
     {
       "type": "word_reveal",
@@ -32,13 +32,13 @@
           "animations": [
             {
               "type": "show_grid_empty",
-              "start": 3.6,
-              "end": 10.8
+              "start": 8.2,
+              "end": 14.9
             },
             {
               "type": "show_clue",
-              "start": 3.6,
-              "end": 9.1,
+              "start": 8.5,
+              "end": 12.7,
               "pos_x": 410,
               "pos_y": 1380,
               "max_text_width": 495,
@@ -47,11 +47,11 @@
             },
             {
               "type": "show_grid_word",
-              "start": 10.8,
-              "end": 14.8,
+              "start": 14.9,
+              "end": 17.9,
               "letter_animation": {
                 "type": "sequential",
-                "time_percentage": 10
+                "time_percentage": 25
               }
             }
           ]
@@ -61,13 +61,13 @@
           "animations": [
             {
               "type": "show_grid_empty",
-              "start": 14.8,
-              "end": 22.0
+              "start": 17.9,
+              "end": 24.6
             },
             {
               "type": "show_clue",
-              "start": 14.8,
-              "end": 20.3,
+              "start": 18.2,
+              "end": 22.4,
               "pos_x": 410,
               "pos_y": 1380,
               "max_text_width": 495,
@@ -76,49 +76,103 @@
             },
             {
               "type": "show_grid_word",
-              "start": 22.0,
-              "end": 26.0,
+              "start": 24.6,
+              "end": 27.6,
               "letter_animation": {
-                "type": "instant"
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        },
+        {
+          "word_index": 2,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 27.6,
+              "end": 34.3
+            },
+            {
+              "type": "show_clue",
+              "start": 27.9,
+              "end": 32.1,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [0, 0, 0],
+              "text_align": "center"
+            },
+            {
+              "type": "show_grid_word",
+              "start": 34.3,
+              "end": 37.3,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        },
+        {
+          "word_index": 3,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 37.3,
+              "end": 44
+            },
+            {
+              "type": "show_clue",
+              "start": 37.6,
+              "end": 41.8,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [0, 0, 0],
+              "text_align": "center"
+            },
+            {
+              "type": "show_grid_word",
+              "start": 44,
+              "end": 47,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        },
+        {
+          "word_index": 4,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 47,
+              "end": 53.7
+            },
+            {
+              "type": "show_clue",
+              "start": 47.3,
+              "end": 51.5,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [0, 0, 0],
+              "text_align": "center"
+            },
+            {
+              "type": "show_grid_word",
+              "start": 53.7,
+              "end": 56.7,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
               }
             }
           ]
         }
       ]
-    },
-    {
-      "type": "random_phrases",
-      "settings": {
-        "highlight_words": {
-          "follow": [255, 0, 0],
-          "subscribe": [0, 128, 0],
-          "share": [0, 0, 255]
-        },
-        "phrases_to_show": [
-          {
-            "type": "social",
-            "start": 3.6,
-            "end": 6.6,
-            "pos_x": "center",
-            "pos_y": 100,
-            "max_text_width": 800,
-            "text_color": [0, 0, 0],
-            "text_align": "center",
-            "text_transform": "uppercase"
-          },
-          {
-            "type": "joke",
-            "start": 6.6,
-            "end": 9.6,
-            "pos_x": "center",
-            "pos_y": 100,
-            "max_text_width": 800,
-            "text_color": [0, 0, 0],
-            "text_align": "center",
-            "text_transform": "uppercase"
-          }
-        ]
-      }
     }
   ],
   "style_settings": {
