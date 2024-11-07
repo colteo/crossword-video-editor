@@ -119,6 +119,46 @@
         {
             "type": "joke",
             "phrase": "Subscribe to receive early access to our newest launches."
+        },
+        {
+            "type": "intro",
+            "phrase": "Ready to put your knowledge to the test?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Think you’re up for the challenge?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Let’s find out how sharp your skills are!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Are you prepared to show what you’ve got?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Let’s see if you’re truly a pro!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Time to prove what you know!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Can you handle this challenge?"
+        },
+        {
+            "type": "intro",
+            "phrase": "It’s time to show off your expertise!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Let’s test your skills – are you ready?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Think you have what it takes? Let’s see!"
         }
     ]
 }
