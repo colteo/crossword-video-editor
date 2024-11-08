@@ -1,12 +1,12 @@
 {
   "template_type": "template_type-a",
-  "input_video": "5-words-popart.mp4",
+  "input_video": "5-words-pixel.mp4",
   "fonts": {
     "main": {
-      "file": "Hey Comic.ttf",
+      "file": "PressStart2P-Regular.ttf",
       "settings": {
         "clue": {
-          "size": 40,
+          "size": 28,
           "color": [
             0,
             0,
@@ -20,8 +20,8 @@
             0,
             0
           ],
-          "vertical_adjustment": -9,
-          "horizontal_adjustment": 0
+          "vertical_adjustment": 4,
+          "horizontal_adjustment": 2
         },
         "random_phrases": {
           "size": 34,
@@ -34,8 +34,8 @@
   "animation_sequence": [
     {
       "type": "initial_grid",
-      "start": 4.9,
-      "end": 7.9
+      "start": 5.1,
+      "end": 8.2
     },
     {
       "type": "word_reveal",
@@ -45,15 +45,15 @@
           "animations": [
             {
               "type": "show_grid_empty",
-              "start": 7.9,
-              "end": 14.5
+              "start": 8.2,
+              "end": 14.9
             },
             {
               "type": "show_clue",
-              "start": 8.3,
-              "end": 12.5,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "start": 8.5,
+              "end": 12.7,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -69,8 +69,8 @@
             },
             {
               "type": "show_grid_word",
-              "start": 14.5,
-              "end": 17.5,
+              "start": 14.9,
+              "end": 17.9,
               "letter_animation": {
                 "type": "sequential",
                 "time_percentage": 25
@@ -83,15 +83,15 @@
           "animations": [
             {
               "type": "show_grid_empty",
-              "start": 17.5,
-              "end": 24.2
+              "start": 17.9,
+              "end": 24.6
             },
             {
               "type": "show_clue",
-              "start": 18.3,
-              "end": 22.3,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "start": 18.2,
+              "end": 22.4,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -107,8 +107,8 @@
             },
             {
               "type": "show_grid_word",
-              "start": 24.2,
-              "end": 27.2,
+              "start": 24.6,
+              "end": 27.6,
               "letter_animation": {
                 "type": "sequential",
                 "time_percentage": 25
@@ -121,15 +121,15 @@
           "animations": [
             {
               "type": "show_grid_empty",
-              "start": 27.2,
-              "end": 33.8
+              "start": 27.6,
+              "end": 34.3
             },
             {
               "type": "show_clue",
-              "start": 27.7,
-              "end": 31.7,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "start": 27.9,
+              "end": 32.1,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -145,8 +145,8 @@
             },
             {
               "type": "show_grid_word",
-              "start": 33.8,
-              "end": 36.8,
+              "start": 34.3,
+              "end": 37.3,
               "letter_animation": {
                 "type": "sequential",
                 "time_percentage": 25
@@ -166,8 +166,8 @@
               "type": "show_clue",
               "start": 37.6,
               "end": 41.8,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -204,8 +204,8 @@
               "type": "show_clue",
               "start": 47.3,
               "end": 51.5,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -222,7 +222,7 @@
             {
               "type": "show_grid_word",
               "start": 53.7,
-              "end": 56.0,
+              "end": 56.7,
               "letter_animation": {
                 "type": "sequential",
                 "time_percentage": 25
@@ -255,103 +255,81 @@
         "phrases_to_show": [
           {
             "type": "intro",
-            "start": 1.6,
-            "end": 3.7,
-            "pos_x": 155,
-            "pos_y": 1435,
+            "start": 6.1,
+            "end": 8.0,
+            "pos_x": 410,
+            "pos_y": 1360,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 64
-          },
-          {
-            "type": "intro",
-            "start": 5.1,
-            "end": 6.3,
-            "pos_x": 460,
-            "pos_y": 1440,
-            "max_text_width": 475,
-            "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 48
-          },
-          {
-            "type": "intro",
-            "start": 6.8,
-            "end": 7.8,
-            "pos_x": 460,
-            "pos_y": 1440,
-            "max_text_width": 475,
-            "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 48
+            "text_transform": "uppercase"
           },
           {
             "type": "joke",
             "start": 16.0,
-            "end": 17.2,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "end": 17.9,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 40
-
+            "text_transform": "uppercase"
           },
           {
             "type": "social",
-            "start": 25.5,
-            "end": 27.0,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "start": 25.6,
+            "end": 27.4,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 40
+            "text_transform": "uppercase"
           },
           {
             "type": "joke",
-            "start": 34.9,
-            "end": 36.5,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "start": 35.3,
+            "end": 37.2,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 40
+            "text_transform": "uppercase"
           },
           {
             "type": "social",
-            "start": 44.6,
-            "end": 46.2,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "start": 45.1,
+            "end": 46.8,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 40
+            "text_transform": "uppercase"
           },
           {
             "type": "social",
-            "start": 54.2,
-            "end": 55.8,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "start": 54.7,
+            "end": 56.6,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 40
+            "text_transform": "uppercase"
           },
           {
             "type": "outro",
-            "start": 56.6,
-            "end": 60.2,
-            "pos_x": 85,
-            "pos_y": 1500,
-            "max_text_width": 600,
+            "start": 57.6,
+            "end": 61.0,
+            "pos_x": 157,
+            "pos_y": 448,
+            "max_text_width": 690,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 62
+            "text_transform": "uppercase",
+            "font_size": 52
           }
         ]
       }
@@ -384,7 +362,7 @@
   },
   "layout": {
     "crossword_position": {
-      "y": 550
+      "y": 400
     }
   }
 }
