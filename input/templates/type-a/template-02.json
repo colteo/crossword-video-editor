@@ -6,7 +6,7 @@
       "file": "Hey Comic.ttf",
       "settings": {
         "clue": {
-          "size": 40,
+          "size": 32,
           "color": [
             0,
             0,
@@ -20,7 +20,7 @@
             0,
             0
           ],
-          "vertical_adjustment": -9,
+          "vertical_adjustment": 0,
           "horizontal_adjustment": 0
         },
         "random_phrases": {
@@ -52,8 +52,8 @@
               "type": "show_clue",
               "start": 8.3,
               "end": 12.5,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -90,8 +90,8 @@
               "type": "show_clue",
               "start": 18.3,
               "end": 22.3,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -128,8 +128,8 @@
               "type": "show_clue",
               "start": 27.7,
               "end": 31.7,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -166,8 +166,8 @@
               "type": "show_clue",
               "start": 37.6,
               "end": 41.8,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -204,8 +204,8 @@
               "type": "show_clue",
               "start": 47.3,
               "end": 51.5,
-              "pos_x": 460,
-              "pos_y": 1465,
+              "pos_x": 410,
+              "pos_y": 1380,
               "max_text_width": 495,
               "text_color": [
                 0,
@@ -222,7 +222,7 @@
             {
               "type": "show_grid_word",
               "start": 53.7,
-              "end": 56.0,
+              "end": 56.7,
               "letter_animation": {
                 "type": "sequential",
                 "time_percentage": 25
@@ -257,101 +257,82 @@
             "type": "intro",
             "start": 1.6,
             "end": 3.7,
-            "pos_x": 155,
-            "pos_y": 1435,
+            "pos_x": 136,
+            "pos_y": 1446,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 64
+            "text_align": "center"
           },
           {
             "type": "intro",
             "start": 5.1,
             "end": 6.3,
-            "pos_x": 460,
-            "pos_y": 1440,
-            "max_text_width": 475,
+            "pos_x": 450,
+            "pos_y": 1517,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 48
+            "text_align": "center"
           },
           {
             "type": "intro",
             "start": 6.8,
             "end": 7.8,
-            "pos_x": 460,
-            "pos_y": 1440,
-            "max_text_width": 475,
+            "pos_x": 450,
+            "pos_y": 1517,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 48
+            "text_align": "center"
           },
           {
             "type": "joke",
             "start": 16.0,
             "end": 17.2,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "pos_x": 512,
+            "pos_y": 1543,
+            "max_text_width": 471,
             "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 40
-
+            "text_align": "center"
           },
           {
             "type": "social",
             "start": 25.5,
             "end": 27.0,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "pos_x": 520,
+            "pos_y": 1506,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 40
+            "text_transform": "uppercase"
           },
           {
             "type": "joke",
             "start": 34.9,
             "end": 36.5,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "pos_x": 520,
+            "pos_y": 1547,
+            "max_text_width": 471,
             "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 40
+            "text_align": "center"
           },
           {
             "type": "social",
             "start": 44.6,
             "end": 46.2,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
+            "pos_x": 513,
+            "pos_y": 1537,
+            "max_text_width": 471,
             "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 40
-          },
-          {
-            "type": "social",
-            "start": 54.2,
-            "end": 55.8,
-            "pos_x": 465,
-            "pos_y": 1450,
-            "max_text_width": 475,
-            "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 40
+            "text_align": "center"
           },
           {
             "type": "outro",
             "start": 56.6,
             "end": 60.2,
-            "pos_x": 85,
-            "pos_y": 1500,
-            "max_text_width": 600,
+            "pos_x": 125,
+            "pos_y": 1457,
+            "max_text_width": 495,
             "text_color": [0, 0, 0],
-            "text_align": "center",
-            "font_size": 62
+            "text_align": "center"
           }
         ]
       }
@@ -384,7 +365,7 @@
   },
   "layout": {
     "crossword_position": {
-      "y": 550
+      "y": 400
     }
   }
 }

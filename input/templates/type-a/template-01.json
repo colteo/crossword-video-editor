@@ -1,6 +1,6 @@
 {
   "template_type": "template_type-a",
-  "input_video": "input_video_long.mp4",
+  "input_video": "5-words-pixel.mp4",
   "fonts": {
     "main": {
       "file": "PressStart2P-Regular.ttf",
@@ -322,7 +322,7 @@
           {
             "type": "outro",
             "start": 57.6,
-            "end": 60.0,
+            "end": 61.0,
             "pos_x": 157,
             "pos_y": 448,
             "max_text_width": 690,

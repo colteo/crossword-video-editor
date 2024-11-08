@@ -8,74 +8,43 @@ import json
 
 app = Flask(__name__)
 
-# Costante per il template path
-TEMPLATE_FILE = 'template-a.json'
-
-def get_template_config(template_path):
-    try:
-        with open(template_path, 'r') as f:
-            template_data = json.load(f)
-            return {
-                'font': template_data['fonts']['main']['file'],
-                'input_video': template_data['input_video']
-            }
-    except Exception as e:
-        # Fallback ai valori precedenti in caso di errore
-        return {
-            'font': 'PressStart2P-Regular.ttf',
-            'input_video': 'input_video_long.mp4'
-        }
-
-# File configurations centralized at the top of the file
-template_config = get_template_config(TEMPLATE_FILE)
-FILE_PATHS = {
-    'input video': template_config['input_video'],
-    'template': TEMPLATE_FILE,
-    'font': template_config['font']
-}
-
 def generate_video(crossword_data):
     try:
         with profile_section("Total Execution"):
             # Inizializza il file manager
             file_manager = FileManager()
 
+            # Inizializza il file manager
+            config = CrosswordConfig()
+            config_manager = ConfigManager(config, file_manager)
+
+            template_path = file_manager.get_random_template_path_by_type(crossword_data['type'])
+
+            # Caricamento e validazione del template
+            template_data = config_manager.load_json_file_by_path(template_path)
+            config_manager.validate_template(template_data)
+            config_manager.validate_crossword_data(crossword_data)
+
             # Verifica che i file necessari esistano
             required_files = {
-                'input video': file_manager.get_input_video_path(FILE_PATHS['input video']),
-                'template': file_manager.get_template_path(FILE_PATHS['template']),
-                'font': file_manager.get_font_path(FILE_PATHS['font'])
+                'input video': file_manager.get_input_video_path(template_data['input_video']),
+                'font': file_manager.get_font_path(template_data['fonts']['main']['file'])
             }
 
             for name, path in required_files.items():
                 if not path.exists():
                     raise FileNotFoundError(f"Required {name} file not found: {path}")
 
-            # Configurazione
-            with profile_section("Configuration"):
-                config = CrosswordConfig(
-                    font_path=str(file_manager.get_font_path(FILE_PATHS['font'])),
-                    clue_font_size=24
-                )
-                config_manager = ConfigManager(config, file_manager)
-
-            # Caricamento e validazione del template
-            with profile_section("Data Loading"):
-                template_data = config_manager.load_json_file(FILE_PATHS['template'])
-                config_manager.validate_template(template_data)
-                config_manager.validate_crossword_data(crossword_data)
-
             # Generazione video
-            with profile_section("Video Generation"):
-                generator = CrosswordVideoGenerator(
-                    template_data,
-                    crossword_data,
-                    config_manager,
-                    file_manager
-                )
+            generator = CrosswordVideoGenerator(
+                template_data,
+                crossword_data,
+                config_manager,
+                file_manager
+            )
 
-                # Processa il video con il nome file dalla configurazione
-                generator.process_video(FILE_PATHS['input video'])
+            # Processa il video con il nome file dalla configurazione
+            generator.process_video(template_data['input_video'])
 
         profiler.print_stats()
         return {"status": "success", "message": "Video generated successfully"}

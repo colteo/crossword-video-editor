@@ -3,6 +3,8 @@ import shutil
 import tempfile
 import uuid
 from datetime import datetime
+import os
+import random
 
 class FileManager:
     """Gestisce i percorsi dei file e le cartelle del progetto"""
@@ -169,3 +171,23 @@ class FileManager:
                 self.temp_dir = None
             except Exception as e:
                 print(f"Warning: Error cleaning temporary files: {e}")
+
+    def get_random_template_path_by_type(self, template_type: str):
+        template_path_type = self.templates_dir / template_type
+
+        templates = self._get_all_file_in_folder(template_path_type)
+
+        template = random.choice(templates)
+
+        return template_path_type / template
+
+    def _get_all_file_in_folder(self, path):
+        """
+        Lista tutti i file in una cartella usando os.listdir()
+        """
+        try:
+            files = os.listdir(path)
+            return files
+        except Exception as e:
+            print(f"Errore durante la lettura della cartella: {e}")
+            return []

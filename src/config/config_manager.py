@@ -32,6 +32,24 @@ class ConfigManager:
         except Exception as e:
             raise Exception(f"Error loading {path}: {str(e)}")
 
+    def load_json_file_by_path(self, filename: str) -> Dict[str, Any]:
+        """Load and validate a JSON file"""
+        try:
+            # Determina il tipo di file e usa il percorso appropriato
+            path = self.file_manager.get_data_path(filename)
+
+            if not path.exists():
+                raise FileNotFoundError(f"File not found: {path}")
+
+            with path.open('r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data
+
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in {path}: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Error loading {path}: {str(e)}")
+
     def validate_crossword_data(self, data: Dict[str, Any]) -> bool:
         """Validate crossword data structure for both standard and hidden word types"""
         # Check if metadata exists to determine crossword type
