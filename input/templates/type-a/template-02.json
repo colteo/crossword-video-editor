@@ -159,7 +159,7 @@
           "animations": [
             {
               "type": "show_grid_empty",
-              "start": 37.3,
+              "start": 36.8,
               "end": 44
             },
             {
@@ -346,7 +346,7 @@
             "type": "outro",
             "start": 56.6,
             "end": 60.2,
-            "pos_x": 75,
+            "pos_x": 90,
             "pos_y": 1500,
             "max_text_width": 600,
             "text_color": [0, 0, 0],
