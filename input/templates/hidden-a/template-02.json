@@ -165,7 +165,7 @@
             {
               "type": "show_clue",
               "start": 37.6,
-              "end": 41.8,
+              "end": 41.4,
               "pos_x": 460,
               "pos_y": 1465,
               "max_text_width": 495,
@@ -346,7 +346,7 @@
             "type": "outro",
             "start": 56.6,
             "end": 60.2,
-            "pos_x": 75,
+            "pos_x": 90,
             "pos_y": 1500,
             "max_text_width": 600,
             "text_color": [0, 0, 0],
@@ -384,7 +384,7 @@
   },
   "layout": {
     "crossword_position": {
-      "y": 550
+      "y": 650
     }
   }
 }
