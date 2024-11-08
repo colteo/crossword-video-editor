@@ -18,7 +18,7 @@ def generate_video(crossword_data):
             config = CrosswordConfig()
             config_manager = ConfigManager(config, file_manager)
 
-            template_path = file_manager.get_random_template_path_by_type(crossword_data['type'])
+            template_path = file_manager.get_random_template_path_by_type(crossword_data['crossword_type'])
 
             # Caricamento e validazione del template
             template_data = config_manager.load_json_file_by_path(template_path)

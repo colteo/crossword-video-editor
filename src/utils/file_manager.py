@@ -37,6 +37,7 @@ class FileManager:
     def generate_output_filename(self,
                                  crossword_type: str,
                                  template_type: str,
+                                 video_name: str,
                                  extension: str = "mp4",
                                  add_guid: bool = False) -> str:
         """
@@ -57,12 +58,14 @@ class FileManager:
         # Pulisce i nomi dei tipi mantenendo il nome completo
         clean_crossword_type = self._clean_type_name(crossword_type)
         clean_template_type = self._clean_type_name(template_type)
+        clean_video_name = self._clean_type_name(video_name)
 
         # Costruisce il nome base del file
         filename_parts = [
             current_date,
             clean_crossword_type,
-            clean_template_type
+            clean_template_type,
+            clean_video_name
         ]
 
         # Aggiunge un GUID se richiesto
@@ -141,6 +144,7 @@ class FileManager:
         filename = self.generate_output_filename(
             crossword_type=crossword_data.get('crossword_type', 'unknown'),
             template_type=template_data.get('template_type', 'unknown'),
+            video_name=template_data.get('input_video', 'unknown'),
             add_guid=add_guid
         )
         return self.output_dir / filename
