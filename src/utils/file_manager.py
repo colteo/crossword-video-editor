@@ -183,10 +183,13 @@ class FileManager:
 
     def _get_all_file_in_folder(self, path):
         """
-        Lista tutti i file in una cartella usando os.listdir()
+        Lista tutti i file (escludendo le cartelle) in una cartella usando os.listdir() e os.path
         """
         try:
-            files = os.listdir(path)
+            # Lista tutti gli elementi nella cartella
+            all_items = os.listdir(path)
+            # Filtra solo i file escludendo le cartelle
+            files = [item for item in all_items if os.path.isfile(os.path.join(path, item))]
             return files
         except Exception as e:
             print(f"Errore durante la lettura della cartella: {e}")
