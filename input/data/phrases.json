@@ -18,7 +18,7 @@
         },
         {
             "type": "social",
-            "phrase": "Share your story with us, and let’s inspire each other."
+            "phrase": "Share your story with us, and let's inspire each other."
         },
         {
             "type": "social",
@@ -54,7 +54,7 @@
         },
         {
             "type": "social",
-            "phrase": "Subscribe now, and let’s embark on this journey together."
+            "phrase": "Subscribe now, and let's embark on this journey together."
         },
         {
             "type": "social",
@@ -86,7 +86,7 @@
         },
         {
             "type": "joke",
-            "phrase": "Don’t forget to like, follow, and stay connected!"
+            "phrase": "Don't forget to like, follow, and stay connected!"
         },
         {
             "type": "joke",
@@ -114,7 +114,7 @@
         },
         {
             "type": "joke",
-            "phrase": "Share what you’ve learned with others and make a difference."
+            "phrase": "Share what you've learned with others and make a difference."
         },
         {
             "type": "joke",
@@ -126,19 +126,19 @@
         },
         {
             "type": "intro",
-            "phrase": "Think you’re up for the challenge?"
+            "phrase": "Think you're up for the challenge?"
         },
         {
             "type": "intro",
-            "phrase": "Let’s find out how sharp your skills are!"
+            "phrase": "Let's find out how sharp your skills are!"
         },
         {
             "type": "intro",
-            "phrase": "Are you prepared to show what you’ve got?"
+            "phrase": "Are you prepared to show what you've got?"
         },
         {
             "type": "intro",
-            "phrase": "Let’s see if you’re truly a pro!"
+            "phrase": "Let's see if you're truly a pro!"
         },
         {
             "type": "intro",
@@ -150,27 +150,27 @@
         },
         {
             "type": "intro",
-            "phrase": "It’s time to show off your expertise!"
+            "phrase": "It's time to show off your expertise!"
         },
         {
             "type": "intro",
-            "phrase": "Let’s test your skills – are you ready?"
+            "phrase": "Let's test your skills – are you ready?"
         },
         {
             "type": "intro",
-            "phrase": "Think you have what it takes? Let’s see!"
+            "phrase": "Think you have what it takes? Let's see!"
         },
         {
             "type": "outro",
-            "phrase": "It’s time to show off your expertise!"
+            "phrase": "It's time to show off your expertise!"
         },
         {
             "type": "outro",
-            "phrase": "Let’s test your skills – are you ready?"
+            "phrase": "Let's test your skills – are you ready?"
         },
         {
             "type": "outro",
-            "phrase": "Think you have what it takes? Let’s see!"
+            "phrase": "Think you have what it takes? Let's see!"
         }
     ]
 }
