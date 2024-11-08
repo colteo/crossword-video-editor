@@ -1,0 +1,368 @@
+{
+  "template_type": "template-01",
+  "input_video": "5-words-pixel.mp4",
+  "fonts": {
+    "main": {
+      "file": "PressStart2P-Regular.ttf",
+      "settings": {
+        "clue": {
+          "size": 28,
+          "color": [
+            0,
+            0,
+            0
+          ]
+        },
+        "grid": {
+          "size": 46,
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "vertical_adjustment": 4,
+          "horizontal_adjustment": 2
+        },
+        "random_phrases": {
+          "size": 34,
+          "color": [0, 0, 0]
+        }
+      }
+    },
+    "fallback": "Arial"
+  },
+  "animation_sequence": [
+    {
+      "type": "initial_grid",
+      "start": 5.1,
+      "end": 8.2
+    },
+    {
+      "type": "word_reveal",
+      "sequence": [
+        {
+          "word_index": 0,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 8.2,
+              "end": 14.9
+            },
+            {
+              "type": "show_clue",
+              "start": 8.5,
+              "end": 12.7,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [
+                0,
+                0,
+                0
+              ],
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
+            },
+            {
+              "type": "show_grid_word",
+              "start": 14.9,
+              "end": 17.9,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        },
+        {
+          "word_index": 1,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 17.9,
+              "end": 24.6
+            },
+            {
+              "type": "show_clue",
+              "start": 18.2,
+              "end": 22.4,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [
+                0,
+                0,
+                0
+              ],
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
+            },
+            {
+              "type": "show_grid_word",
+              "start": 24.6,
+              "end": 27.6,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        },
+        {
+          "word_index": 2,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 27.6,
+              "end": 34.3
+            },
+            {
+              "type": "show_clue",
+              "start": 27.9,
+              "end": 32.1,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [
+                0,
+                0,
+                0
+              ],
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
+            },
+            {
+              "type": "show_grid_word",
+              "start": 34.3,
+              "end": 37.3,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        },
+        {
+          "word_index": 3,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 37.3,
+              "end": 44
+            },
+            {
+              "type": "show_clue",
+              "start": 37.6,
+              "end": 41.8,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [
+                0,
+                0,
+                0
+              ],
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
+            },
+            {
+              "type": "show_grid_word",
+              "start": 44,
+              "end": 47,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        },
+        {
+          "word_index": 4,
+          "animations": [
+            {
+              "type": "show_grid_empty",
+              "start": 47,
+              "end": 53.7
+            },
+            {
+              "type": "show_clue",
+              "start": 47.3,
+              "end": 51.5,
+              "pos_x": 410,
+              "pos_y": 1380,
+              "max_text_width": 495,
+              "text_color": [
+                0,
+                0,
+                0
+              ],
+              "text_align": "center",
+              "animation": {
+                "type": "word_by_word",
+                "word_delay": 0.2,
+                "fade_duration": 0.1
+              }
+            },
+            {
+              "type": "show_grid_word",
+              "start": 53.7,
+              "end": 56.7,
+              "letter_animation": {
+                "type": "sequential",
+                "time_percentage": 25
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "random_phrases",
+      "settings": {
+        "highlight_words": {
+          "follow": [
+            255,
+            0,
+            0
+          ],
+          "subscribe": [
+            0,
+            128,
+            0
+          ],
+          "share": [
+            0,
+            0,
+            255
+          ]
+        },
+        "phrases_to_show": [
+          {
+            "type": "intro",
+            "start": 6.1,
+            "end": 8.0,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "joke",
+            "start": 16.0,
+            "end": 17.9,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "social",
+            "start": 25.6,
+            "end": 27.4,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "joke",
+            "start": 35.3,
+            "end": 37.2,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "social",
+            "start": 45.1,
+            "end": 46.8,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "social",
+            "start": 54.7,
+            "end": 56.6,
+            "pos_x": 410,
+            "pos_y": 1360,
+            "max_text_width": 495,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase"
+          },
+          {
+            "type": "outro",
+            "start": 57.6,
+            "end": 61.0,
+            "pos_x": 157,
+            "pos_y": 448,
+            "max_text_width": 690,
+            "text_color": [0, 0, 0],
+            "text_align": "center",
+            "text_transform": "uppercase",
+            "font_size": 52
+          }
+        ]
+      }
+    }
+  ],
+  "style_settings": {
+    "crossword": {
+      "cell_size": 75,
+      "border_color": [
+        0,
+        0,
+        0
+      ],
+      "background_color": [
+        255,
+        255,
+        255
+      ],
+      "highlight_color": [
+        0,
+        255,
+        0
+      ],
+      "text_color": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "layout": {
+    "crossword_position": {
+      "y": 400
+    }
+  }
+}
