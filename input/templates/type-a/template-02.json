@@ -6,7 +6,7 @@
       "file": "Hey Comic.ttf",
       "settings": {
         "clue": {
-          "size": 40,
+          "size": 36,
           "color": [
             0,
             0,
@@ -55,6 +55,7 @@
               "pos_x": 460,
               "pos_y": 1465,
               "max_text_width": 495,
+              "line_spacing": 1.2,
               "text_color": [
                 0,
                 0,
@@ -93,6 +94,7 @@
               "pos_x": 460,
               "pos_y": 1465,
               "max_text_width": 495,
+              "line_spacing": 1.2,
               "text_color": [
                 0,
                 0,
@@ -131,6 +133,7 @@
               "pos_x": 460,
               "pos_y": 1465,
               "max_text_width": 495,
+              "line_spacing": 1.2,
               "text_color": [
                 0,
                 0,
@@ -169,6 +172,7 @@
               "pos_x": 460,
               "pos_y": 1465,
               "max_text_width": 495,
+              "line_spacing": 1.2,
               "text_color": [
                 0,
                 0,
@@ -207,6 +211,7 @@
               "pos_x": 460,
               "pos_y": 1465,
               "max_text_width": 495,
+              "line_spacing": 1.2,
               "text_color": [
                 0,
                 0,
