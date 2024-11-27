@@ -64,7 +64,7 @@
               "text_align": "center",
               "animation": {
                 "type": "word_by_word",
-                "word_delay": 0.2,
+                "word_delay": 0.15,
                 "fade_duration": 0.1
               }
             },
@@ -103,7 +103,7 @@
               "text_align": "center",
               "animation": {
                 "type": "word_by_word",
-                "word_delay": 0.2,
+                "word_delay": 0.15,
                 "fade_duration": 0.1
               }
             },
@@ -142,7 +142,7 @@
               "text_align": "center",
               "animation": {
                 "type": "word_by_word",
-                "word_delay": 0.2,
+                "word_delay": 0.15,
                 "fade_duration": 0.1
               }
             },
@@ -181,7 +181,7 @@
               "text_align": "center",
               "animation": {
                 "type": "word_by_word",
-                "word_delay": 0.2,
+                "word_delay": 0.15,
                 "fade_duration": 0.1
               }
             },
@@ -220,7 +220,7 @@
               "text_align": "center",
               "animation": {
                 "type": "word_by_word",
-                "word_delay": 0.2,
+                "word_delay": 0.15,
                 "fade_duration": 0.1
               }
             },
