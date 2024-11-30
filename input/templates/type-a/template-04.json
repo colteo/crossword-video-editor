@@ -263,11 +263,11 @@
             "start": 1.6,
             "end": 3.7,
             "pos_x": 155,
-            "pos_y": 1435,
+            "pos_y": 1410,
             "max_text_width": 495,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 64
+            "font_size": 58
           },
           {
             "type": "intro",
@@ -351,12 +351,12 @@
             "type": "outro",
             "start": 56.6,
             "end": 60.2,
-            "pos_x": 90,
-            "pos_y": 1500,
+            "pos_x": 100,
+            "pos_y": 1425,
             "max_text_width": 600,
             "text_color": [0, 0, 0],
             "text_align": "center",
-            "font_size": 62
+            "font_size": 58
           }
         ]
       }
