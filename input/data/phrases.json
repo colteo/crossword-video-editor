@@ -1,176 +1,636 @@
 {
     "phrases": [
         {
-            "type": "social",
-            "phrase": "Follow us for more updates on exciting news and special offers."
-        },
-        {
-            "type": "social",
-            "phrase": "Share your thoughts with us in the comments section below."
-        },
-        {
-            "type": "social",
-            "phrase": "Subscribe now and never miss an important update!"
-        },
-        {
-            "type": "social",
-            "phrase": "Follow the link to discover our latest collection."
-        },
-        {
-            "type": "social",
-            "phrase": "Share your story with us, and let's inspire each other."
-        },
-        {
-            "type": "social",
-            "phrase": "Subscribe for a surprise discount on your first purchase!"
-        },
-        {
-            "type": "social",
-            "phrase": "Follow your passion, and great things will happen."
-        },
-        {
-            "type": "social",
-            "phrase": "Subscribe to stay updated on the latest trends."
-        },
-        {
-            "type": "social",
-            "phrase": "Follow along as we bring you behind the scenes."
-        },
-        {
-            "type": "social",
-            "phrase": "Share this amazing experience with your friends and family."
-        },
-        {
-            "type": "social",
-            "phrase": "Subscribe and be part of our creative community."
-        },
-        {
-            "type": "social",
-            "phrase": "Follow these simple steps to achieve your goals."
-        },
-        {
-            "type": "social",
-            "phrase": "Share this with those who need a little inspiration."
-        },
-        {
-            "type": "social",
-            "phrase": "Subscribe now, and let's embark on this journey together."
-        },
-        {
-            "type": "social",
-            "phrase": "Follow our updates for exciting news and giveaways!"
-        },
-        {
-            "type": "joke",
-            "phrase": "Don't forget to subscribe to our newsletter for exclusive content."
-        },
-        {
-            "type": "joke",
-            "phrase": "Follow our journey and see what inspires us daily."
-        },
-        {
-            "type": "joke",
-            "phrase": "Share this post with friends who need a little motivation."
-        },
-        {
-            "type": "joke",
-            "phrase": "Subscribe to our channel for weekly videos and insights."
-        },
-        {
-            "type": "joke",
-            "phrase": "Follow us on social media to stay in the loop."
-        },
-        {
-            "type": "joke",
-            "phrase": "Share the love by tagging someone who would enjoy this."
-        },
-        {
-            "type": "joke",
-            "phrase": "Don't forget to like, follow, and stay connected!"
-        },
-        {
-            "type": "joke",
-            "phrase": "Share this moment with someone special in your life."
-        },
-        {
-            "type": "joke",
-            "phrase": "Subscribe to our blog for lifestyle tips and more."
-        },
-        {
-            "type": "joke",
-            "phrase": "Follow us for quick tips that make life easier."
-        },
-        {
-            "type": "joke",
-            "phrase": "Share your feedback to help us grow better every day."
-        },
-        {
-            "type": "joke",
-            "phrase": "Subscribe to unlock premium content just for you."
-        },
-        {
-            "type": "joke",
-            "phrase": "Follow your dreams and believe in your potential."
-        },
-        {
-            "type": "joke",
-            "phrase": "Share what you've learned with others and make a difference."
-        },
-        {
-            "type": "joke",
-            "phrase": "Subscribe to receive early access to our newest launches."
+            "type": "intro",
+            "phrase": "Think you're smart? Prove it!"
         },
         {
             "type": "intro",
-            "phrase": "Ready to put your knowledge to the test?"
+            "phrase": "Only geniuses can solve this - are you one?"
         },
         {
             "type": "intro",
-            "phrase": "Think you're up for the challenge?"
+            "phrase": "99% of people fail this - what about you?"
         },
         {
             "type": "intro",
-            "phrase": "Let's find out how sharp your skills are!"
+            "phrase": "Your IQ test starts now!"
         },
         {
             "type": "intro",
-            "phrase": "Are you prepared to show what you've got?"
+            "phrase": "Smart people only beyond this point!"
         },
         {
             "type": "intro",
-            "phrase": "Let's see if you're truly a pro!"
+            "phrase": "Let's see what your brain can really do!"
         },
         {
             "type": "intro",
-            "phrase": "Time to prove what you know!"
+            "phrase": "Not as easy as you think!"
         },
         {
             "type": "intro",
-            "phrase": "Can you handle this challenge?"
+            "phrase": "Still think you're the smartest in the room?"
         },
         {
             "type": "intro",
-            "phrase": "It's time to show off your expertise!"
+            "phrase": "This will expose your real intelligence!"
         },
         {
             "type": "intro",
-            "phrase": "Let's test your skills – are you ready?"
+            "phrase": "Bet you can't solve this one!"
         },
         {
             "type": "intro",
-            "phrase": "Think you have what it takes? Let's see!"
+            "phrase": "Too smart for you? We'll see about that!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Your brain vs. This crossword - who wins?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Show us how smart you really are!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Think you're a genius? Let's test that theory!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Your brain isn't ready for this!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Warning: High IQ required!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Is your brain as good as you think?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Time to prove you're not just average!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Only the brightest will succeed!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Smart enough? Let's find out!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Your brain isn't fooling anyone today!"
+        },
+        {
+            "type": "intro",
+            "phrase": "So you think you're intellectual elite?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Time to expose your real brain power!"
+        },
+        {
+            "type": "intro",
+            "phrase": "I bet this will make you sweat!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Are you as clever as you claim?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Your brain's biggest challenge yet!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Show off that big brain of yours!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Think you're special? Prove it now!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Your intelligence is about to be tested!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Watch your ego shrink with this one!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Time to question your intelligence!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Not everyone is born a genius... are you?"
+        },
+        {
+            "type": "intro",
+            "phrase": "Let's see what you're really made of!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Your brain needs this reality check!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Feeling smart today? Think again!"
+        },
+        {
+            "type": "intro",
+            "phrase": "This will humble you real quick!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Time to question everything you know!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Your confidence ends here!"
+        },
+        {
+            "type": "intro",
+            "phrase": "Smart people only - others scroll away!"
+        },
+        {
+            "type": "joke",
+            "phrase": "I guess talent runs in your blood after all"
+        },
+        {
+            "type": "joke",
+            "phrase": "Seems like miracles do happen"
+        },
+        {
+            "type": "joke",
+            "phrase": "You're proving me wrong, interesting"
+        },
+        {
+            "type": "joke",
+            "phrase": "Well, you're quite the dark horse"
+        },
+        {
+            "type": "joke",
+            "phrase": "Hidden genius, who would've thought?"
+        },
+        {
+            "type": "joke",
+            "phrase": "Brains and looks? What a surprise"
+        },
+        {
+            "type": "joke",
+            "phrase": "You're smarter than you let on"
+        },
+        {
+            "type": "joke",
+            "phrase": "Your potential is finally showing"
+        },
+        {
+            "type": "joke",
+            "phrase": "Rather brilliant for an amateur"
+        },
+        {
+            "type": "joke",
+            "phrase": "Intelligence suits you, surprisingly"
+        },
+        {
+            "type": "joke",
+            "phrase": "Your mind is sharper than expected"
+        },
+        {
+            "type": "joke",
+            "phrase": "Quite the clever one, aren't we?"
+        },
+        {
+            "type": "joke",
+            "phrase": "You're surprisingly good at this"
+        },
+        {
+            "type": "joke",
+            "phrase": "Who knew you had it in you?"
+        },
+        {
+            "type": "joke",
+            "phrase": "A diamond in the rough, I see"
+        },
+        {
+            "type": "joke",
+            "phrase": "A mind like yours is quite a find"
+        },
+        {
+            "type": "joke",
+            "phrase": "Brilliance looks good on you, I must say"
+        },
+        {
+            "type": "joke",
+            "phrase": "You've got more spark than meets the eye"
+        },
+        {
+            "type": "joke",
+            "phrase": "Beneath that facade lies a scholar"
+        },
+        {
+            "type": "joke",
+            "phrase": "Intelligence becomes you, surprisingly"
+        },
+        {
+            "type": "joke",
+            "phrase": "Well, look who's finally shining bright"
+        },
+        {
+            "type": "joke",
+            "phrase": "More clever than you appear to be"
+        },
+        {
+            "type": "joke",
+            "phrase": "There's wisdom behind those eyes, after all"
+        },
+        {
+            "type": "joke",
+            "phrase": "You're exceeding all expectations"
+        },
+        {
+            "type": "joke",
+            "phrase": "Turning out to be quite the genius"
+        },
+        {
+            "type": "joke",
+            "phrase": "Such talent, hidden in plain sight"
+        },
+        {
+            "type": "joke",
+            "phrase": "Perhaps I judged too soon"
+        },
+        {
+            "type": "joke",
+            "phrase": "Brighter than your first impression"
+        },
+        {
+            "type": "joke",
+            "phrase": "Not just a pretty face, are you?"
+        },
+        {
+            "type": "joke",
+            "phrase": "Someone's been holding back their skills"
+        },
+        {
+            "type": "joke",
+            "phrase": "More than meets the eye, indeed"
+        },
+        {
+            "type": "joke",
+            "phrase": "Your true colors are showing at last"
+        },
+        {
+            "type": "joke",
+            "phrase": "Breaking the mold, aren't we?"
+        },
+        {
+            "type": "joke",
+            "phrase": "Wisdom comes from unexpected places"
+        },
+        {
+            "type": "joke",
+            "phrase": "There's a mastermind hiding within"
+        },
+        {
+            "type": "joke",
+            "phrase": "Proving assumptions wrong, I see"
+        },
+        {
+            "type": "joke",
+            "phrase": "Quite the intellectual after all"
+        },
+        {
+            "type": "joke",
+            "phrase": "Smart looks good on you, surprisingly"
+        },
+        {
+            "type": "joke",
+            "phrase": "Finally showing your true potential"
+        },
+        {
+            "type": "social",
+            "phrase": "Stuck? Subscribe for daily tips!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend who thinks faster!"
+        },
+        {
+            "type": "social",
+            "phrase": "Like and share - challenge accepted?"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe - become a word master!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend who'll get stuck!"
+        },
+        {
+            "type": "social",
+            "phrase": "Getting close? Comment 'ALMOST'!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe and unlock next puzzle!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend - race begins!"
+        },
+        {
+            "type": "social",
+            "phrase": "Like and share your progress!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe - join the brain race!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag your smartest friend now!"
+        },
+        {
+            "type": "social",
+            "phrase": "Comment 'GOT IT' if solved!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe for daily battles!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend - test their skills!"
+        },
+        {
+            "type": "social",
+            "phrase": "Like and show you're ahead!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe - puzzles get harder!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend who needs help!"
+        },
+        {
+            "type": "social",
+            "phrase": "Comment if you see the word!"
+        },
+        {
+            "type": "social",
+            "phrase": "Like and share the challenge!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe - race against time!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend - who's faster?"
+        },
+        {
+            "type": "social",
+            "phrase": "Found it? Comment 'HERE'!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe and show your speed!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend who can't win!"
+        },
+        {
+            "type": "social",
+            "phrase": "Like and share if it's easy!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe - beat the clock!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend - competition on!"
+        },
+        {
+            "type": "social",
+            "phrase": "Comment your progress now!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe - join word hunters!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend - challenge time!"
+        },
+        {
+            "type": "social",
+            "phrase": "Like if you're winning!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe for word battles!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag your puzzle partner!"
+        },
+        {
+            "type": "social",
+            "phrase": "Comment 'EASY' if too simple!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe - race to finish!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend - begin duel!"
+        },
+        {
+            "type": "social",
+            "phrase": "Like and prove you're fast!"
+        },
+        {
+            "type": "social",
+            "phrase": "Subscribe - challenge yourself!"
+        },
+        {
+            "type": "social",
+            "phrase": "Tag a friend who'll lose!"
+        },
+        {
+            "type": "social",
+            "phrase": "Comment 'ON IT' if close!"
         },
         {
             "type": "outro",
-            "phrase": "It's time to show off your expertise!"
+            "phrase": "You've proven to be quite the wordsmith - subscribe for daily puzzles"
         },
         {
             "type": "outro",
-            "phrase": "Let's test your skills – are you ready?"
+            "phrase": "Look at you, solving like a pro! Come back tomorrow - hit subscribe"
         },
         {
             "type": "outro",
-            "phrase": "Think you have what it takes? Let's see!"
+            "phrase": "Great minds solve alike - join our puzzle community by subscribing"
+        },
+        {
+            "type": "outro",
+            "phrase": "Puzzle completed! Ready for tomorrow's challenge? Hit that subscribe button"
+        },
+        {
+            "type": "outro",
+            "phrase": "Successfully solved! Make sure to subscribe for your daily dose of brain training"
+        },
+        {
+            "type": "outro",
+            "phrase": "Finished already? You're getting good at this - subscribe for more"
+        },
+        {
+            "type": "outro",
+            "phrase": "Mission accomplished! Your next challenge awaits - hit follow"
+        },
+        {
+            "type": "outro",
+            "phrase": "That's a wrap on today's puzzle! Subscribe to keep the fun going"
+        },
+        {
+            "type": "outro",
+            "phrase": "You've mastered this one - ready for tomorrow's puzzle? Subscribe now"
+        },
+        {
+            "type": "outro",
+            "phrase": "Well done, puzzle enthusiast! Subscribe for your daily crossword fix"
+        },
+        {
+            "type": "outro",
+            "phrase": "Another puzzle in the books! Subscribe to fill tomorrow's pages"
+        },
+        {
+            "type": "outro",
+            "phrase": "Nicely solved! Join us tomorrow - don't forget to subscribe"
+        },
+        {
+            "type": "outro",
+            "phrase": "Today's puzzle: completed! Tomorrow's puzzle: subscribe to find out"
+        },
+        {
+            "type": "outro",
+            "phrase": "You're getting better every day - subscribe to keep improving"
+        },
+        {
+            "type": "outro",
+            "phrase": "Puzzle solved! Like what you see? There's more where that came from - subscribe"
+        },
+        {
+            "type": "outro",
+            "phrase": "That's today's puzzle done! Subscribe for tomorrow's brain teaser"
+        },
+        {
+            "type": "outro",
+            "phrase": "Impressive solving skills! Keep them sharp - subscribe for daily practice"
+        },
+        {
+            "type": "outro",
+            "phrase": "You've made it to the end! Subscribe to start tomorrow's adventure"
+        },
+        {
+            "type": "outro",
+            "phrase": "Puzzle complete! Ready to make this a daily habit? Hit subscribe"
+        },
+        {
+            "type": "outro",
+            "phrase": "Success! Subscribe now and let's solve another one tomorrow"
+        },
+        {
+            "type": "outro",
+            "phrase": "Look at you, solving puzzles like a champion! Subscribe for more challenges"
+        },
+        {
+            "type": "outro",
+            "phrase": "That's all for today! Want more puzzles? You know what to do - subscribe"
+        },
+        {
+            "type": "outro",
+            "phrase": "Mission completed! Subscribe to accept tomorrow's challenge"
+        },
+        {
+            "type": "outro",
+            "phrase": "Puzzle solved successfully! Subscribe for your next brain workout"
+        },
+        {
+            "type": "outro",
+            "phrase": "Another puzzle conquered! Subscribe to keep the victories coming"
+        },
+        {
+            "type": "outro",
+            "phrase": "Finished like a pro! Subscribe for more puzzling adventures"
+        },
+        {
+            "type": "outro",
+            "phrase": "Well done, puzzle solver! Subscribe for your next challenge"
+        },
+        {
+            "type": "outro",
+            "phrase": "Perfect solve! Make sure to subscribe for tomorrow's puzzle"
+        },
+        {
+            "type": "outro",
+            "phrase": "You've got skills! Subscribe to put them to good use tomorrow"
+        },
+        {
+            "type": "outro",
+            "phrase": "Puzzle complete! Like and subscribe for more daily challenges"
+        },
+        {
+            "type": "outro",
+            "phrase": "Another successful solve! Subscribe to keep your streak going"
+        },
+        {
+            "type": "outro",
+            "phrase": "Great job today! Subscribe for more puzzling fun tomorrow"
+        },
+        {
+            "type": "outro",
+            "phrase": "You've made it look easy! Subscribe for tomorrow's challenge"
+        },
+        {
+            "type": "outro",
+            "phrase": "Puzzle mastered! Subscribe to test your skills again tomorrow"
+        },
+        {
+            "type": "outro",
+            "phrase": "Success! Subscribe now and let's do this again tomorrow"
+        },
+        {
+            "type": "outro",
+            "phrase": "Well played! Subscribe to keep your mind sharp every day"
+        },
+        {
+            "type": "outro",
+            "phrase": "Done and done! Subscribe for more daily word challenges"
+        },
+        {
+            "type": "outro",
+            "phrase": "Finished with style! Subscribe to maintain your winning streak"
+        },
+        {
+            "type": "outro",
+            "phrase": "Puzzle solved! Subscribe now - same time tomorrow?"
+        },
+        {
+            "type": "outro",
+            "phrase": "That's a wrap! Subscribe to join us for tomorrow's puzzle"
         }
     ]
 }
