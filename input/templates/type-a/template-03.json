@@ -329,12 +329,12 @@
             "start": 57.6,
             "end": 61.0,
             "pos_x": 157,
-            "pos_y": 448,
+            "pos_y": 435,
             "max_text_width": 690,
             "text_color": [0, 0, 0],
             "text_align": "center",
             "text_transform": "uppercase",
-            "font_size": 52
+            "font_size": 48
           }
         ]
       }
